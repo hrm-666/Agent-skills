@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -20,12 +21,13 @@ def main() -> None:
     sql = args.sql.strip()
 
     # 安全检查：只允许 SELECT
-    if not sql.lower().startswith("select"):
+    clean_sql = re.sub(r'--.*', '', sql).strip()
+    if not clean_sql.split()[0].lower() == 'select':
         print("错误：只允许 SELECT 语句。", file=sys.stderr)
         sys.exit(1)
 
     # 自动补 LIMIT
-    if "limit" not in sql.lower():
+    if not re.search(r'\blimit\b', sql, re.IGNORECASE):
         sql = f"{sql} LIMIT {_DEFAULT_LIMIT}"
 
     try:
@@ -37,7 +39,7 @@ def main() -> None:
         print(f"数据库错误: {e}", file=sys.stderr)
         sys.exit(1)
 
-    print(json.dumps([dict(row) for row in rows], ensure_ascii=False, indent=2))
+    print(json.dumps([dict(row) for row in rows], ensure_ascii=False))
 
 
 if __name__ == "__main__":
