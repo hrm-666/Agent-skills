@@ -31,7 +31,8 @@ def main() -> None:
         sql = f"{sql} LIMIT {_DEFAULT_LIMIT}"
 
     try:
-        conn = sqlite3.connect(args.db)
+        conn = sqlite3.connect(args.db, timeout=10)
+        conn.execute("PRAGMA busy_timeout = 5000")  # 等待 5 秒让锁释放
         conn.row_factory = sqlite3.Row
         rows = conn.execute(sql).fetchall()
         conn.close()

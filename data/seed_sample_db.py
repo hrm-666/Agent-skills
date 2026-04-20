@@ -22,7 +22,7 @@ _EMPLOYEES = [
 
 def seed(db_path: str = _DEFAULT_DB) -> None:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS employees (
             id         INTEGER PRIMARY KEY,
