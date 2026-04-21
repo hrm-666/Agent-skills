@@ -9,6 +9,7 @@ from typing import Optional
 import yaml
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from core.agent import Agent
@@ -79,9 +80,16 @@ app = FastAPI(title="mini-agent WebUI")
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
+@app.get("/")
+def root():
+    """Serve the WebUI HTML page."""
+    return FileResponse("webui/index.html")
+
+
 @app.get("/api/providers")
 def list_providers():
     """List available LLM providers with configuration status."""
+    active_provider = cfg.get("active_provider", "kimi")
     providers = []
     for name, config in PROVIDERS.items():
         api_key = os.environ.get(config["env_key"], "")
@@ -91,6 +99,7 @@ def list_providers():
             "default_model": config["default_model"],
             "supports_vision": config["supports_vision"],
             "configured": bool(api_key),
+            "active": name == active_provider,
         })
     return providers
 
