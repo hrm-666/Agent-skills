@@ -1,0 +1,32 @@
+# 当前启用的 LLM
+active_provider: deepseek
+
+# Provider 的 model 覆盖(不填就用默认)
+providers:
+  kimi:
+    model: kimi-k2.5
+  qwen:
+    model: glm-4.7
+  deepseek:
+    model: deepseek-chat
+
+# Skills 配置
+skills:
+  dir: ./skills
+  enabled: None  # None = 全部启用,或者填白名单数组
+
+# Agent 配置
+agent:
+  max_iterations: 15
+
+# WebUI 配置
+webui:
+  host: 127.0.0.1
+  port: 8000
+
+# 日志配置
+logging:
+  dir: ./logs           # 日志文件目录
+  level: INFO           # 最低日志级别 (DEBUG/INFO/WARNING/ERROR)
+  console: true         # 启用彩色控制台输出 (via rich)
+  file: true            # 启用文件输出

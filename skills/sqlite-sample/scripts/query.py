@@ -23,7 +23,7 @@ def main() -> None:
     # 安全检查：只允许 SELECT
     clean_sql = re.sub(r'--.*', '', sql).strip()
     if not clean_sql.split()[0].lower() == 'select':
-        print("错误：只允许 SELECT 语句。", file=sys.stderr)
+        print("error：only allowed SELECT ", file=sys.stderr)
         sys.exit(1)
 
     # 自动补 LIMIT
@@ -37,7 +37,7 @@ def main() -> None:
         rows = conn.execute(sql).fetchall()
         conn.close()
     except sqlite3.Error as e:
-        print(f"数据库错误: {e}", file=sys.stderr)
+        print(f"db error: {e}", file=sys.stderr)
         sys.exit(1)
 
     print(json.dumps([dict(row) for row in rows], ensure_ascii=False))

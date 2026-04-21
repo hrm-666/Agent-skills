@@ -2,7 +2,11 @@
 """Mini Agent 统一入口。"""
 
 import argparse
-import sys
+import yaml
+from core.logging_config import setup_logging
+
+with open("config.yaml", encoding="utf-8") as f:
+    setup_logging(yaml.safe_load(f) or {})
 
 from adapters.cli import run
 
