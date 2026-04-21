@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="transition-colors duration-300">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Agent - Elegant UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --msg-user: #6366f1;
+            --msg-agent: #ffffff;
+            --glass: rgba(255, 255, 255, 0.8);
+        }
+
+        .dark {
+            --bg-primary: #09090b;
+            --bg-secondary: #141416;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #27272a;
+            --accent: #818cf8;
+            --accent-hover: #6366f1;
+            --msg-user: #4f46e5;
+            --msg-agent: #18181b;
+            --glass: rgba(13, 13, 15, 0.8);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .space-grotesk { font-family: 'Space Grotesk', sans-serif; }
+
+        .chat-container {
+            height: calc(100vh - 180px);
+        }
+
+        .message-enter {
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-header {
+            backdrop-filter: blur(12px);
+            background-color: var(--glass);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tool-timeline::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: 8px;
+            width: 1px;
+            background-color: var(--border);
+        }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        #userInput:focus {
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .modal-enter {
+            animation: modalFade 0.2s ease-out forwards;
+        }
+
+        @keyframes modalFade {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="transition-colors duration-300 overflow-hidden">
+
+    <!-- 顶部导航 -->
+    <header class="glass-header sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <h1 class="text-xl font-medium space-grotesk tracking-tight">Mini Agent</h1>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <!-- 模型选择 -->
+                <div class="hidden sm:flex items-center gap-2 bg-secondary border border-border px-3 py-1.5 rounded-full">
+                    <span class="text-[10px] uppercase tracking-widest font-semibold text-secondary">LLM</span>
+                    <select id="modelSelect" class="bg-transparent text-sm font-medium outline-none cursor-pointer">
+                        <option value="kimi">Kimi 2.5</option>
+                    </select>
+                </div>
+
+                <!-- 深色模式切换 -->
+                <button id="themeToggle" class="p-2 hover:bg-secondary rounded-full border border-border transition-all">
+                    <svg id="sunIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg id="moonIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
+
+                <!-- 设置按钮 -->
+                <button id="settingsBtn" class="p-2 hover:bg-secondary rounded-full border border-border transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 聊天主窗口 -->
+    <main id="chatWindow" class="max-w-4xl mx-auto px-6 py-6 chat-container overflow-y-auto scrollbar-hide space-y-8">
+        <div id="messages" class="flex flex-col gap-8 pb-32">
+            <!-- 初始欢迎语 -->
+            <div class="flex gap-4 message-enter">
+                <div class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white flex-shrink-0 shadow-md">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                </div>
+                <div class="flex flex-col gap-2 max-w-2xl">
+                    <div class="text-[10px] font-bold text-secondary uppercase tracking-wider">Mini Agent</div>
+                    <div class="bg-[var(--msg-agent)] border border-border p-4 rounded-2xl rounded-tl-none shadow-sm text-sm/relaxed">
+                        你好！我是您的智能助手。我已经准备好帮您处理文件、执行命令或分析数据了。需要我做什么吗？
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 悬浮输入区 -->
+    <div class="fixed bottom-8 left-0 right-0 z-40">
+        <div class="max-w-3xl mx-auto px-6">
+            <div class="bg-[var(--glass)] backdrop-blur-xl border border-border p-2 rounded-3xl shadow-2xl flex flex-col gap-2 transition-all focus-within:ring-2 focus-within:ring-accent/20">
+                <textarea 
+                    id="userInput"
+                    rows="1" 
+                    placeholder="问我任何事..." 
+                    class="w-full bg-transparent border-none resize-none px-4 py-3 outline-none text-sm placeholder:text-secondary"
+                ></textarea>
+                
+                <div class="flex items-center justify-between px-2 pb-2">
+                    <div class="flex items-center gap-1">
+                        <label class="p-2 hover:bg-border rounded-xl cursor-pointer transition-colors" title="添加文件">
+                            <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            <input type="file" id="fileUpload" class="hidden" multiple accept="image/*">
+                        </label>
+                        <div id="filePreview" class="flex gap-2"></div>
+                    </div>
+
+                    <button id="sendBtn" class="bg-accent text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-accent-hover transition-all active:scale-95 shadow-lg shadow-accent/20">
+                        发送
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户设置模态框 -->
+    <div id="settingsModal" class="fixed inset-0 z-50 items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+        <div class="bg-[var(--bg-primary)] border border-border p-8 rounded-3xl w-[400px] shadow-2xl modal-enter">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold space-grotesk">个人资料管理</h3>
+                <button id="closeSettings" class="text-secondary hover:text-primary">&times;</button>
+            </div>
+            <div class="space-y-6">
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-bold text-secondary uppercase">显示名称</label>
+                    <input id="userName" type="text" class="bg-secondary border border-border p-3 rounded-xl outline-none focus:border-accent">
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-bold text-secondary uppercase">头像链接</label>
+                    <input id="userAvatar" type="text" placeholder="https://..." class="bg-secondary border border-border p-3 rounded-xl outline-none focus:border-accent">
+                </div>
+                <button id="saveProfile" class="w-full bg-accent text-white py-3 rounded-xl font-semibold hover:bg-accent-hover transition-all">
+                    应用变更
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chatWindow');
+        const messagesDiv = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const fileUpload = document.getElementById('fileUpload');
+        const filePreview = document.getElementById('filePreview');
+        const modelSelect = document.getElementById('modelSelect');
+        const themeToggle = document.getElementById('themeToggle');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const saveProfile = document.getElementById('saveProfile');
+
+        // 个性化状态
+        const state = {
+            name: localStorage.getItem('user_name') || '访客',
+            avatar: localStorage.getItem('user_avatar') || '',
+            theme: localStorage.getItem('theme') || 'light',
+            uploadedImages: []
+        };
+
+        // 初始化
+        function init() {
+            if (state.theme === 'dark') document.documentElement.classList.add('dark');
+            updateThemeIcons();
+            loadProviders();
+        }
+
+        function updateThemeIcons() {
+            document.getElementById('sunIcon').classList.toggle('hidden', state.theme !== 'dark');
+            document.getElementById('moonIcon').classList.toggle('hidden', state.theme === 'dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            state.theme = state.theme === 'light' ? 'dark' : 'light';
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', state.theme);
+            updateThemeIcons();
+        });
+
+        // 设置面板切换
+        settingsBtn.addEventListener('click', () => {
+            document.getElementById('userName').value = state.name;
+            document.getElementById('userAvatar').value = state.avatar;
+            settingsModal.classList.replace('hidden', 'flex');
+        });
+
+        document.getElementById('closeSettings').addEventListener('click', () => {
+            settingsModal.classList.replace('flex', 'hidden');
+        });
+
+        saveProfile.addEventListener('click', () => {
+            state.name = document.getElementById('userName').value;
+            state.avatar = document.getElementById('userAvatar').value;
+            localStorage.setItem('user_name', state.name);
+            localStorage.setItem('user_avatar', state.avatar);
+            settingsModal.classList.replace('flex', 'hidden');
+        });
+
+        // 自动调整高度
+        userInput.addEventListener('input', () => {
+            userInput.style.height = 'auto';
+            userInput.style.height = userInput.scrollHeight + 'px';
+        });
+
+        async function loadProviders() {
+            try {
+                const res = await fetch('/api/providers');
+                const providers = await res.json();
+                modelSelect.innerHTML = providers.map(p => 
+                    `<option value="${p.name}" ${p.configured ? '' : 'disabled'}>${p.name.toUpperCase()}${p.supports_vision ? ' (识图)' : ''}</option>`
+                ).join('');
+                const saved = localStorage.getItem('mini_agent_model');
+                if (saved) modelSelect.value = saved;
+            } catch (err) {}
+        }
+
+        fileUpload.addEventListener('change', async (e) => {
+            for (let file of e.target.files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    state.uploadedImages.push(data.path);
+                    
+                    const wrap = document.createElement('div');
+                    wrap.className = "relative h-12 w-12 rounded-lg overflow-hidden border border-border";
+                    wrap.innerHTML = `<img src="${data.path}" class="object-cover w-full h-full">`;
+                    filePreview.appendChild(wrap);
+                } catch (err) {}
+            }
+        });
+
+        function addMessage(role, text, steps = []) {
+            const isUser = role === 'user';
+            const div = document.createElement('div');
+            div.className = `flex gap-4 message-enter ${isUser ? 'flex-row-reverse' : ''}`;
+            
+            const avatarHtml = isUser 
+                ? `<div class="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shadow-sm flex-shrink-0 border-2 border-white">${state.avatar ? `<img src="${state.avatar}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full text-xs font-bold">${state.name[0]}</div>`}</div>`
+                : `<div class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white flex-shrink-0 shadow-md"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg></div>`;
+
+            const contentHtml = `
+                ${avatarHtml}
+                <div class="flex flex-col gap-2 max-w-2xl ${isUser ? 'items-end' : ''}">
+                    <div class="text-[10px] font-bold text-secondary uppercase tracking-wider">${isUser ? state.name : 'Mini Agent'}</div>
+                    <div class="${isUser ? 'bg-accent text-white rounded-tr-none' : 'bg-[var(--msg-agent)] border border-border rounded-tl-none'} p-4 rounded-2xl shadow-sm text-sm/relaxed">
+                        ${text.replace(/\n/g, '<br>')}
+                    </div>
+                    ${steps.length > 0 ? `
+                        <div class="relative pl-6 py-2 flex flex-col gap-3 tool-timeline">
+                            ${steps.map(s => s.type === 'tool_result' ? `
+                                <div class="message-enter">
+                                    <details class="group bg-secondary border border-border rounded-xl">
+                                        <summary class="p-3 text-[12px] font-medium cursor-pointer list-none flex items-center gap-2">
+                                            <span class="w-5 h-5 bg-blue-500/10 text-blue-500 rounded flex items-center justify-center text-[10px]">FIX</span>
+                                            🔧 ${s.name}
+                                            <svg class="w-4 h-4 ml-auto text-secondary transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                        </summary>
+                                        <div class="px-3 pb-3">
+                                            <pre class="bg-black/80 text-[11px] p-3 rounded-lg overflow-x-auto text-slate-300 font-mono">${s.result}</pre>
+                                        </div>
+                                    </details>
+                                </div>
+                            ` : '').join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            div.innerHTML = contentHtml;
+            messagesDiv.appendChild(div);
+            // 简单平滑滚动
+            chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' });
+        }
+
+        async function send() {
+            const text = userInput.value.trim();
+            if (!text && state.uploadedImages.length === 0) return;
+
+            addMessage('user', text);
+            userInput.value = '';
+            userInput.style.height = '64px';
+            sendBtn.disabled = true;
+
+            const currentImages = [...state.uploadedImages];
+            state.uploadedImages = [];
+            filePreview.innerHTML = '';
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        image_paths: currentImages,
+                        provider: modelSelect.value
+                    })
+                });
+                const data = await res.json();
+                addMessage('agent', data.reply, data.steps);
+            } catch (err) {
+                addMessage('agent', 'Error: ' + err.message);
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        sendBtn.addEventListener('click', send);
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                send();
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
