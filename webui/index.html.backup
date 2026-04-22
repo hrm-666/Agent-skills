@@ -1,0 +1,1255 @@
+<!doctype html>
+<html class="light" lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini Agent</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              background: "#f7f9fb",
+              surface: "#ffffff",
+              "surface-soft": "#f2f4f6",
+              "surface-muted": "#eceef0",
+              primary: "#0058be",
+              "primary-strong": "#004395",
+              "primary-soft": "#d8e2ff",
+              secondary: "#545f73",
+              outline: "#c2c6d6",
+              "text-main": "#191c1e",
+              "text-soft": "#5f6675",
+              danger: "#ba1a1a",
+              "danger-soft": "#ffdad6",
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+            boxShadow: {
+              panel: "0 20px 60px rgba(15, 23, 42, 0.08)",
+              soft: "0 12px 30px rgba(15, 23, 42, 0.06)",
+            },
+            animation: {
+              "fade-up": "fadeUp 0.5s ease-out forwards",
+            },
+            keyframes: {
+              fadeUp: {
+                "0%": { opacity: "0", transform: "translateY(12px)" },
+                "100%": { opacity: "1", transform: "translateY(0)" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 450, "GRAD" 0, "opsz" 24;
+      }
+
+      .grid-glow {
+        background-image:
+          radial-gradient(circle at top left, rgba(0, 88, 190, 0.12), transparent 32%),
+          radial-gradient(circle at top right, rgba(0, 88, 190, 0.08), transparent 28%),
+          linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.82)),
+          linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+        background-size: auto, auto, auto, 28px 28px, 28px 28px;
+        background-position: center;
+      }
+
+      .conversation-scroll::-webkit-scrollbar,
+      .step-scroll::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .conversation-scroll::-webkit-scrollbar-thumb,
+      .step-scroll::-webkit-scrollbar-thumb {
+        background: rgba(84, 95, 115, 0.22);
+        border-radius: 999px;
+      }
+    </style>
+  </head>
+  <body class="bg-background text-text-main antialiased">
+    <div class="fixed inset-0 -z-10 bg-background"></div>
+    <div class="fixed inset-0 -z-10 opacity-80">
+      <div class="grid-glow h-full w-full"></div>
+    </div>
+
+    <nav class="fixed top-0 z-50 h-16 w-full border-b border-slate-200 bg-white/90 backdrop-blur-xl">
+      <div class="mx-auto flex h-full w-full max-w-[1280px] items-center justify-between px-6">
+        <div class="flex items-center gap-8">
+          <div class="flex items-end gap-2">
+            <span class="text-2xl font-black tracking-[-0.08em] text-primary">MINI</span>
+            <span class="pb-0.5 text-sm font-semibold uppercase tracking-[0.45em] text-slate-900">
+              AGENT
+            </span>
+          </div>
+          <div class="hidden items-center gap-6 md:flex">
+            <a class="border-b-2 border-primary pb-1 text-sm font-bold tracking-tight text-primary" href="#">
+              Console
+            </a>
+            <a
+              class="text-sm font-medium tracking-tight text-slate-500 transition-colors duration-200 hover:text-primary"
+              href="#chat-workspace"
+            >
+              Workspace
+            </a>
+            <a
+              class="text-sm font-medium tracking-tight text-slate-500 transition-colors duration-200 hover:text-primary"
+              href="#telemetry"
+            >
+              Telemetry
+            </a>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span
+            class="hidden rounded-full border border-primary/15 bg-primary-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary md:inline-flex"
+          >
+            Runtime Live
+          </span>
+          <button
+            type="button"
+            class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-transform hover:bg-slate-50 active:scale-95"
+            aria-label="Open workspace"
+          >
+            <span class="material-symbols-outlined">grid_view</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mx-auto max-w-[1280px] px-6 pb-16 pt-24">
+      <nav class="mb-8 flex items-center gap-2 text-sm text-slate-500">
+        <a class="transition-colors hover:text-primary" href="#">Home</a>
+        <span class="material-symbols-outlined text-base">chevron_right</span>
+        <a class="transition-colors hover:text-primary" href="#">Agent Runtime</a>
+        <span class="material-symbols-outlined text-base">chevron_right</span>
+        <span class="font-medium text-text-main">Web Console</span>
+      </nav>
+
+      <section class="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
+        <section
+          class="animate-fade-up rounded-[28px] border border-slate-200 bg-white p-8 shadow-panel"
+        >
+          <div class="inline-flex rounded-full bg-primary-soft px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+            Multimodal Workflow
+          </div>
+          <h1 class="mt-5 max-w-3xl text-4xl font-bold leading-tight tracking-[-0.04em] text-text-main md:text-5xl">
+            用更干净的控制台界面，跑通上传、对话、工具回放这条主链路。
+          </h1>
+          <p class="mt-4 max-w-3xl text-base leading-7 text-text-soft">
+            这个页面保留现有 Mini Agent 的请求流程：先上传附件，再把路径传给
+            <code class="rounded bg-slate-100 px-1.5 py-0.5 text-sm text-slate-700">/api/chat</code>
+            ，最后把工具步骤回放到右侧事件流。
+          </p>
+
+          <div class="mt-8 grid gap-4 md:grid-cols-3">
+            <article class="rounded-2xl border border-slate-200 bg-surface-soft p-5">
+              <div class="flex items-center gap-3">
+                <span
+                  class="material-symbols-outlined rounded-full bg-white p-2 text-primary shadow-soft"
+                >
+                  upload_file
+                </span>
+                <span class="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Step 01
+                </span>
+              </div>
+              <h2 class="mt-4 text-lg font-semibold text-text-main">附件先入库</h2>
+              <p class="mt-2 text-sm leading-6 text-text-soft">
+                前端逐个调用 <code>/api/upload</code>，把结果路径暂存后再发起聊天请求。
+              </p>
+            </article>
+
+            <article class="rounded-2xl border border-slate-200 bg-surface-soft p-5">
+              <div class="flex items-center gap-3">
+                <span
+                  class="material-symbols-outlined rounded-full bg-white p-2 text-primary shadow-soft"
+                >
+                  forum
+                </span>
+                <span class="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Step 02
+                </span>
+              </div>
+              <h2 class="mt-4 text-lg font-semibold text-text-main">无状态对话</h2>
+              <p class="mt-2 text-sm leading-6 text-text-soft">
+                每次请求都重新装配 runtime，页面上的历史消息只是前端展示层。
+              </p>
+            </article>
+
+            <article class="rounded-2xl border border-slate-200 bg-surface-soft p-5">
+              <div class="flex items-center gap-3">
+                <span
+                  class="material-symbols-outlined rounded-full bg-white p-2 text-primary shadow-soft"
+                >
+                  handyman
+                </span>
+                <span class="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Step 03
+                </span>
+              </div>
+              <h2 class="mt-4 text-lg font-semibold text-text-main">工具回放可见</h2>
+              <p class="mt-2 text-sm leading-6 text-text-soft">
+                后端返回的 <code>steps</code> 会按轮次显示，方便看清工具调用过程。
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <aside
+          class="animate-fade-up rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel"
+          style="animation-delay: 0.08s"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+                Provider Control
+              </p>
+              <h2 class="mt-3 text-2xl font-semibold tracking-[-0.03em] text-text-main">
+                选择本轮模型
+              </h2>
+            </div>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+              API Status
+            </span>
+          </div>
+
+          <label
+            for="providerSelect"
+            class="mt-6 block text-xs font-semibold uppercase tracking-[0.24em] text-slate-500"
+          >
+            Provider
+          </label>
+          <div class="relative mt-3">
+            <span
+              class="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              model_training
+            </span>
+            <select
+              id="providerSelect"
+              class="w-full rounded-2xl border border-slate-200 bg-surface-soft py-3.5 pl-12 pr-4 text-sm font-medium text-text-main outline-none transition focus:border-primary focus:bg-white focus:ring-0"
+            >
+              <option>正在加载...</option>
+            </select>
+          </div>
+          <p id="providerHint" class="mt-3 text-sm leading-6 text-text-soft">
+            正在请求可用 provider 列表...
+          </p>
+
+          <div class="mt-6 space-y-4">
+            <div class="rounded-2xl border border-slate-200 bg-surface-soft p-4">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">perm_media</span>
+                <div>
+                  <p class="text-sm font-semibold text-text-main">附件处理规则</p>
+                  <p class="mt-1 text-sm leading-6 text-text-soft">
+                    图片会按 provider 能力决定是否转成视觉输入，普通文件会附加为路径文本。
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-surface-soft p-4">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">bolt</span>
+                <div>
+                  <p class="text-sm font-semibold text-text-main">请求模式</p>
+                  <p class="mt-1 text-sm leading-6 text-text-soft">
+                    当前是非流式响应，回复和步骤在单次请求完成后统一更新。
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-primary text-white">
+              <div class="flex items-start gap-3 p-4">
+                <span class="material-symbols-outlined">info</span>
+                <div>
+                  <p class="text-sm font-semibold uppercase tracking-[0.16em] text-white/80">
+                    Console Note
+                  </p>
+                  <p class="mt-2 text-sm leading-6 text-white/90">
+                    这里的选择只影响当前发起的请求，不会修改
+                    <code class="rounded bg-white/15 px-1.5 py-0.5 text-white">config.yaml</code>
+                    的默认值。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.9fr)]">
+        <section
+          id="chat-workspace"
+          class="animate-fade-up overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-panel"
+          style="animation-delay: 0.14s"
+        >
+          <div class="border-b border-slate-200 px-6 py-6">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+                  Conversation
+                </p>
+                <h2 class="mt-3 text-3xl font-semibold tracking-[-0.03em] text-text-main">
+                  Chat Workspace
+                </h2>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-text-soft">
+                  提交消息后，前端会先处理附件上传，再把返回路径和文本一并提交给后端聊天接口。
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-3">
+                <div
+                  class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-soft px-4 py-2 text-sm font-medium text-primary"
+                >
+                  <span class="material-symbols-outlined text-base">monitoring</span>
+                  <span id="statusLine">正在准备界面...</span>
+                </div>
+                <div
+                  class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
+                >
+                  <span class="material-symbols-outlined text-base">sync_alt</span>
+                  Non-streaming
+                </div>
+              </div>
+            </div>
+            <div
+              id="errorBox"
+              class="mt-4 hidden rounded-2xl border border-danger bg-danger-soft px-4 py-3 text-sm leading-6 text-danger"
+            ></div>
+          </div>
+
+          <div
+            id="conversation"
+            class="conversation-scroll min-h-[420px] space-y-5 overflow-y-auto bg-surface-soft/80 px-6 py-6"
+          >
+            <div
+              id="emptyState"
+              class="rounded-[26px] border border-dashed border-slate-300 bg-white px-6 py-12 text-center shadow-soft"
+            >
+              <div
+                class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-primary"
+              >
+                <span class="material-symbols-outlined text-3xl">forum</span>
+              </div>
+              <h3 class="mt-5 text-xl font-semibold text-text-main">准备开始一轮新请求</h3>
+              <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-text-soft">
+                输入任务、拖拽附件或点击回形针按钮。页面会先上传文件，再把路径传给
+                <code class="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">/api/chat</code>
+                ，右侧会同步记录工具步骤。
+              </p>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-200 bg-white px-6 py-6">
+            <div
+              id="dropZone"
+              class="rounded-[26px] border border-dashed border-slate-300 bg-surface-soft p-5 transition-all duration-200"
+            >
+              <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                    Compose
+                  </p>
+                  <h3 class="mt-2 text-xl font-semibold tracking-[-0.02em] text-text-main">
+                    发送一条任务
+                  </h3>
+                  <p class="mt-2 max-w-2xl text-sm leading-6 text-text-soft">
+                    支持拖拽或批量选择附件。按 Enter 发送，按 Shift + Enter 换行。
+                  </p>
+                </div>
+                <button
+                  id="attachButton"
+                  type="button"
+                  title="添加附件"
+                  aria-label="添加附件"
+                  class="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-transform hover:bg-slate-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span class="material-symbols-outlined">attach_file</span>
+                </button>
+              </div>
+
+              <input id="fileInput" type="file" multiple class="hidden" />
+
+              <div
+                id="pendingFilesPanel"
+                class="mt-5 hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-soft"
+              >
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <p id="pendingFilesSummary" class="text-sm text-text-soft">已选择 0 个附件</p>
+                  <button
+                    id="clearFilesButton"
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-surface-soft px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600 transition-colors hover:border-primary hover:text-primary"
+                  >
+                    清空附件
+                  </button>
+                </div>
+                <div id="pendingFiles" class="flex flex-wrap gap-2"></div>
+              </div>
+
+              <form id="chatForm" class="mt-5 space-y-4">
+                <textarea
+                  id="messageInput"
+                  rows="5"
+                  placeholder="例如：查询薪资最高的 3 名员工，描述这张图片，或结合已上传附件给出总结。"
+                  class="w-full resize-none rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm leading-7 text-text-main outline-none transition focus:border-primary focus:ring-0"
+                ></textarea>
+
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div class="space-y-1">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                      Request Pipeline
+                    </p>
+                    <p class="max-w-2xl text-sm leading-6 text-text-soft">
+                      附件先上传到
+                      <code class="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">uploads/</code>
+                      ，然后把返回路径发给聊天接口；不支持视觉的 provider 会把图片按路径说明继续处理。
+                    </p>
+                  </div>
+                  <button
+                    id="sendButton"
+                    type="submit"
+                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold uppercase tracking-[0.18em] text-white transition-all hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span class="material-symbols-outlined text-base">send</span>
+                    发送请求
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <aside class="space-y-6">
+          <section
+            id="telemetry"
+            class="animate-fade-up overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-panel"
+            style="animation-delay: 0.2s"
+          >
+            <div class="border-b border-slate-200 px-6 py-6">
+              <p class="text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+                Telemetry
+              </p>
+              <h2 class="mt-3 text-2xl font-semibold tracking-[-0.03em] text-text-main">
+                Tool Event Stream
+              </h2>
+              <p class="mt-2 text-sm leading-6 text-text-soft">
+                每次 <code>/api/chat</code> 返回的 <code>steps</code> 都会按请求轮次追加在这里。
+              </p>
+            </div>
+            <div id="stepStream" class="step-scroll max-h-[720px] space-y-4 overflow-y-auto px-6 py-6">
+              <div
+                id="stepEmptyState"
+                class="rounded-[24px] border border-dashed border-slate-300 bg-surface-soft px-5 py-10 text-center"
+              >
+                <div
+                  class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft text-primary"
+                >
+                  <span class="material-symbols-outlined">handyman</span>
+                </div>
+                <p class="mt-4 text-base font-semibold text-text-main">当前还没有工具调用</p>
+                <p class="mt-2 text-sm leading-6 text-text-soft">
+                  当模型调用 read、write、bash 或 activate_skill 时，会在这里显示参数和结果。
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="animate-fade-up rounded-[28px] border border-slate-200 bg-white p-6 shadow-panel"
+            style="animation-delay: 0.26s"
+          >
+            <h2 class="text-xl font-semibold tracking-[-0.03em] text-text-main">Workspace Rules</h2>
+            <div class="mt-5 space-y-4">
+              <article class="rounded-2xl border border-slate-200 bg-surface-soft p-4">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">policy</span>
+                  <div>
+                    <p class="text-sm font-semibold text-text-main">路径受限</p>
+                    <p class="mt-1 text-sm leading-6 text-text-soft">
+                      聊天接口只接受 <code>/uploads/</code> 下的附件路径，避免越界访问。
+                    </p>
+                  </div>
+                </div>
+              </article>
+              <article class="rounded-2xl border border-slate-200 bg-surface-soft p-4">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">memory</span>
+                  <div>
+                    <p class="text-sm font-semibold text-text-main">每轮重新装配</p>
+                    <p class="mt-1 text-sm leading-6 text-text-soft">
+                      WebUI 和 CLI 共用同一套 runtime 装配逻辑，但每轮请求都是新实例。
+                    </p>
+                  </div>
+                </div>
+              </article>
+              <article class="rounded-2xl border border-primary/10 bg-primary text-white p-5">
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-white/75">
+                  Preview
+                </p>
+                <p class="mt-3 text-sm leading-6 text-white/90">
+                  这次改版只换了界面风格和布局，前端请求顺序、接口字段和状态管理保持兼容。
+                </p>
+              </article>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <footer class="mt-12 border-t border-slate-200 pt-8">
+        <div class="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+          <div class="max-w-md">
+            <div class="flex items-end gap-2">
+              <span class="text-xl font-black tracking-[-0.08em] text-primary">MINI</span>
+              <span class="pb-0.5 text-xs font-semibold uppercase tracking-[0.45em] text-slate-900">
+                AGENT
+              </span>
+            </div>
+            <p class="mt-3 text-sm leading-6 text-text-soft">
+              一个围绕 agent loop、tool use、skills 和双端适配构建的轻量级实验运行时。
+            </p>
+          </div>
+          <div class="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Runtime</p>
+              <ul class="mt-3 space-y-2 text-sm text-text-soft">
+                <li>CLI / WebUI 共用 runtime</li>
+                <li>Provider 可切换</li>
+                <li>工具步骤可回放</li>
+              </ul>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Workflow</p>
+              <ul class="mt-3 space-y-2 text-sm text-text-soft">
+                <li>Upload then Chat</li>
+                <li>Tool call feedback</li>
+                <li>Local skill activation</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const PROVIDER_STORAGE_KEY = "mini-agent-provider";
+
+      const state = {
+        providers: [],
+        selectedProvider: "",
+        pendingFiles: [],
+        sending: false,
+        requestCount: 0,
+        pendingBubble: null,
+      };
+
+      const refs = {
+        providerSelect: document.getElementById("providerSelect"),
+        providerHint: document.getElementById("providerHint"),
+        statusLine: document.getElementById("statusLine"),
+        errorBox: document.getElementById("errorBox"),
+        conversation: document.getElementById("conversation"),
+        emptyState: document.getElementById("emptyState"),
+        stepStream: document.getElementById("stepStream"),
+        stepEmptyState: document.getElementById("stepEmptyState"),
+        dropZone: document.getElementById("dropZone"),
+        fileInput: document.getElementById("fileInput"),
+        attachButton: document.getElementById("attachButton"),
+        pendingFilesPanel: document.getElementById("pendingFilesPanel"),
+        pendingFilesSummary: document.getElementById("pendingFilesSummary"),
+        pendingFiles: document.getElementById("pendingFiles"),
+        clearFilesButton: document.getElementById("clearFilesButton"),
+        chatForm: document.getElementById("chatForm"),
+        messageInput: document.getElementById("messageInput"),
+        sendButton: document.getElementById("sendButton"),
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        bindEvents();
+        bootstrapPage();
+      });
+
+      function bindEvents() {
+        refs.providerSelect.addEventListener("change", handleProviderChange);
+        refs.attachButton.addEventListener("click", () => refs.fileInput.click());
+        refs.clearFilesButton.addEventListener("click", clearPendingFiles);
+        refs.fileInput.addEventListener("change", (event) => {
+          addFiles(event.target.files);
+          refs.fileInput.value = "";
+        });
+        refs.chatForm.addEventListener("submit", handleSubmit);
+        refs.messageInput.addEventListener("keydown", handleMessageKeydown);
+
+        refs.dropZone.addEventListener("dragenter", handleDragEnter);
+        refs.dropZone.addEventListener("dragover", handleDragOver);
+        refs.dropZone.addEventListener("dragleave", handleDragLeave);
+        refs.dropZone.addEventListener("drop", handleDrop);
+      }
+
+      async function bootstrapPage() {
+        setStatus("正在加载 provider 列表...");
+        clearError();
+
+        try {
+          await loadProviders();
+          setStatus("界面已准备就绪，可以开始发起请求。");
+        } catch (error) {
+          showError(error.message || "加载 provider 失败");
+          setStatus("初始化失败，请检查后端服务是否已启动。");
+        }
+      }
+
+      async function loadProviders() {
+        const data = await requestJson("/api/providers");
+        const providers = Array.isArray(data) ? data : [];
+
+        if (!providers.length) {
+          throw new Error("没有可用的 provider 信息");
+        }
+
+        state.providers = providers;
+        const storedProvider = safeGetStorage(PROVIDER_STORAGE_KEY);
+        const activeProvider = providers.find((item) => item.is_active);
+        const configuredProvider = providers.find((item) => item.configured);
+        const initialProvider =
+          providers.find((item) => item.name === storedProvider)?.name ||
+          activeProvider?.name ||
+          configuredProvider?.name ||
+          providers[0].name;
+
+        state.selectedProvider = initialProvider;
+        safeSetStorage(PROVIDER_STORAGE_KEY, state.selectedProvider);
+        renderProviderOptions();
+        updateProviderHint();
+      }
+
+      function renderProviderOptions() {
+        refs.providerSelect.innerHTML = "";
+
+        for (const provider of state.providers) {
+          const option = document.createElement("option");
+          const visionText = provider.supports_vision ? "支持图片" : "仅文本";
+          const configuredText = provider.configured ? "已配置" : "未配置";
+          option.value = provider.name;
+          option.textContent = `${provider.name} / ${visionText} / ${configuredText}`;
+          option.selected = provider.name === state.selectedProvider;
+          refs.providerSelect.appendChild(option);
+        }
+      }
+
+      function updateProviderHint() {
+        const provider = getSelectedProvider();
+        if (!provider) {
+          refs.providerHint.textContent = "当前未选中 provider。";
+          return;
+        }
+
+        const hintParts = [
+          provider.configured ? "API Key 已配置" : "API Key 未配置",
+          provider.supports_vision ? "支持图片输入" : "图片会按路径说明继续处理",
+        ];
+        refs.providerHint.textContent = hintParts.join(" / ");
+      }
+
+      function handleProviderChange(event) {
+        state.selectedProvider = event.target.value;
+        safeSetStorage(PROVIDER_STORAGE_KEY, state.selectedProvider);
+        updateProviderHint();
+        clearError();
+      }
+
+      function getSelectedProvider() {
+        return state.providers.find((item) => item.name === state.selectedProvider) || null;
+      }
+
+      function handleMessageKeydown(event) {
+        if (event.key !== "Enter" || event.shiftKey) {
+          return;
+        }
+
+        event.preventDefault();
+        refs.chatForm.requestSubmit();
+      }
+
+      function handleDragEnter(event) {
+        event.preventDefault();
+        setDropZoneActive(true);
+      }
+
+      function handleDragOver(event) {
+        event.preventDefault();
+        setDropZoneActive(true);
+      }
+
+      function handleDragLeave(event) {
+        event.preventDefault();
+        if (!refs.dropZone.contains(event.relatedTarget)) {
+          setDropZoneActive(false);
+        }
+      }
+
+      function handleDrop(event) {
+        event.preventDefault();
+        setDropZoneActive(false);
+        addFiles(event.dataTransfer.files);
+      }
+
+      function setDropZoneActive(active) {
+        refs.dropZone.classList.toggle("border-primary", active);
+        refs.dropZone.classList.toggle("bg-primary-soft", active);
+      }
+
+      function addFiles(fileList) {
+        const incomingFiles = Array.from(fileList || []);
+        if (!incomingFiles.length) {
+          return;
+        }
+
+        const deduped = [...state.pendingFiles];
+        for (const file of incomingFiles) {
+          const exists = deduped.some(
+            (item) =>
+              item.name === file.name &&
+              item.size === file.size &&
+              item.lastModified === file.lastModified
+          );
+          if (!exists) {
+            deduped.push(file);
+          }
+        }
+
+        state.pendingFiles = deduped;
+        renderPendingFiles();
+        setStatus(`已选择 ${state.pendingFiles.length} 个附件，发送时会先上传。`);
+      }
+
+      function clearPendingFiles() {
+        if (!state.pendingFiles.length || state.sending) {
+          return;
+        }
+
+        state.pendingFiles = [];
+        renderPendingFiles();
+        setStatus("附件列表已清空，可以继续输入消息。");
+      }
+
+      function removePendingFile(index) {
+        state.pendingFiles.splice(index, 1);
+        renderPendingFiles();
+        if (!state.pendingFiles.length && !state.sending) {
+          setStatus("附件列表已清空，可以继续输入消息。");
+        }
+      }
+
+      function renderPendingFiles() {
+        refs.pendingFiles.innerHTML = "";
+        refs.pendingFilesPanel.classList.toggle("hidden", !state.pendingFiles.length);
+        refs.pendingFilesSummary.textContent = `已选择 ${state.pendingFiles.length} 个附件`;
+        refs.clearFilesButton.disabled = state.sending || !state.pendingFiles.length;
+
+        if (!state.pendingFiles.length) {
+          return;
+        }
+
+        state.pendingFiles.forEach((file, index) => {
+          const chip = document.createElement("div");
+          chip.className =
+            "inline-flex items-center gap-2 rounded-full border border-slate-200 bg-surface-soft px-3 py-2 text-xs text-slate-600";
+
+          const icon = document.createElement("span");
+          icon.className = "material-symbols-outlined text-sm text-primary";
+          icon.textContent = "draft";
+          chip.appendChild(icon);
+
+          const label = document.createElement("span");
+          label.textContent = `${file.name} / ${formatBytes(file.size)}`;
+          chip.appendChild(label);
+
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.className =
+            "rounded-full px-2 py-1 text-slate-400 transition hover:bg-white hover:text-slate-700";
+          removeButton.textContent = "移除";
+          removeButton.disabled = state.sending;
+          removeButton.addEventListener("click", () => removePendingFile(index));
+          chip.appendChild(removeButton);
+
+          refs.pendingFiles.appendChild(chip);
+        });
+      }
+
+      async function handleSubmit(event) {
+        event.preventDefault();
+        if (state.sending) {
+          return;
+        }
+
+        const text = refs.messageInput.value.trim();
+        if (!text) {
+          showError("请输入消息文本后再发送。");
+          setStatus("发送已取消：消息内容为空。");
+          return;
+        }
+
+        clearError();
+        const provider = getSelectedProvider();
+        if (!provider) {
+          showError("当前 provider 不存在，请刷新页面后重试。");
+          setStatus("发送已取消：provider 状态异常。");
+          return;
+        }
+        if (!provider.configured) {
+          showError(`当前 provider "${provider.name}" 未配置 API Key，请切换到已配置的 provider。`);
+          setStatus("发送已取消：当前 provider 未配置。");
+          return;
+        }
+
+        state.requestCount += 1;
+        const requestId = state.requestCount;
+        const filesSnapshot = [...state.pendingFiles];
+
+        appendMessage({
+          role: "user",
+          title: "你",
+          text,
+          files: filesSnapshot.map((file) => file.name),
+        });
+
+        setSending(true);
+        showPendingBubble("正在准备请求...");
+
+        try {
+          let uploadedPaths = [];
+
+          if (filesSnapshot.length) {
+            setStatus(`正在上传 ${filesSnapshot.length} 个附件...`);
+            updatePendingBubble(`正在上传 ${filesSnapshot.length} 个附件...`);
+            uploadedPaths = await uploadFiles(filesSnapshot);
+          }
+
+          setStatus("附件处理完成，正在等待 Agent 回复...");
+          updatePendingBubble("Agent 正在处理这次请求...");
+
+          if (filesSnapshot.length && !provider.supports_vision) {
+            setStatus(
+              "当前 provider 不支持图片输入，图片会按路径说明继续处理，普通文件会作为附件路径提供。"
+            );
+            updatePendingBubble(
+              "当前 provider 不支持图片输入，图片将按路径说明继续处理，普通文件会作为附件路径提供..."
+            );
+          }
+
+          const result = await requestJson("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text,
+              image_paths: uploadedPaths,
+              provider: provider.name,
+            }),
+          });
+
+          clearPendingBubble();
+          appendMessage({
+            role: "assistant",
+            title: "Agent",
+            text: result.reply || "模型没有返回文本结果。",
+          });
+          renderStepGroup(requestId, result.steps || [], {
+            provider: provider.name,
+            fileCount: filesSnapshot.length,
+          });
+
+          refs.messageInput.value = "";
+          state.pendingFiles = [];
+          renderPendingFiles();
+          setStatus(`第 ${requestId} 次请求已完成。`);
+        } catch (error) {
+          clearPendingBubble();
+          showError(error.message || "请求失败");
+          appendMessage({
+            role: "system",
+            title: "系统",
+            text: `本次请求失败：${error.message || "未知错误"}`,
+          });
+          setStatus("请求失败，请修正后重试。");
+        } finally {
+          setSending(false);
+          refs.messageInput.focus();
+        }
+      }
+
+      async function uploadFiles(files) {
+        const uploadedPaths = [];
+
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append("file", file, file.name);
+
+          const result = await requestJson("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (typeof result.path !== "string" || !result.path) {
+            throw new Error(`附件上传返回缺少 path: ${file.name}`);
+          }
+
+          uploadedPaths.push(result.path);
+        }
+
+        return uploadedPaths;
+      }
+
+      function appendMessage({ role, title, text, files = [] }) {
+        refs.emptyState.classList.add("hidden");
+
+        const wrapper = document.createElement("div");
+        wrapper.className = role === "user" ? "flex justify-end" : "flex justify-start";
+
+        const bubble = document.createElement("div");
+        bubble.className =
+          role === "user"
+            ? "max-w-[88%] rounded-[28px] rounded-br-md bg-primary px-5 py-5 text-sm leading-7 text-white shadow-soft"
+            : role === "assistant"
+              ? "max-w-[88%] rounded-[28px] rounded-bl-md border border-slate-200 bg-white px-5 py-5 text-sm leading-7 text-text-main shadow-soft"
+              : "max-w-[88%] rounded-[28px] rounded-bl-md border border-danger bg-danger-soft px-5 py-5 text-sm leading-7 text-danger shadow-soft";
+
+        const titleEl = document.createElement("div");
+        titleEl.className =
+          role === "user"
+            ? "mb-3 text-xs font-semibold uppercase tracking-[0.26em] text-white/70"
+            : role === "assistant"
+              ? "mb-3 text-xs font-semibold uppercase tracking-[0.26em] text-slate-400"
+              : "mb-3 text-xs font-semibold uppercase tracking-[0.26em] text-danger/80";
+        titleEl.textContent = title;
+        bubble.appendChild(titleEl);
+
+        const textEl = document.createElement("div");
+        textEl.className = "whitespace-pre-wrap break-words";
+        textEl.textContent = text;
+        bubble.appendChild(textEl);
+
+        if (files.length) {
+          const fileWrap = document.createElement("div");
+          fileWrap.className = "mt-4 flex flex-wrap gap-2";
+          for (const fileName of files) {
+            const fileTag = document.createElement("span");
+            fileTag.className =
+              role === "user"
+                ? "rounded-full bg-white/15 px-3 py-1.5 text-xs text-white/85"
+                : "rounded-full bg-surface-soft px-3 py-1.5 text-xs text-text-soft";
+            fileTag.textContent = fileName;
+            fileWrap.appendChild(fileTag);
+          }
+          bubble.appendChild(fileWrap);
+        }
+
+        wrapper.appendChild(bubble);
+        refs.conversation.appendChild(wrapper);
+        refs.conversation.scrollTop = refs.conversation.scrollHeight;
+      }
+
+      function showPendingBubble(text) {
+        clearPendingBubble();
+        refs.emptyState.classList.add("hidden");
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "flex justify-start";
+
+        const bubble = document.createElement("div");
+        bubble.className =
+          "max-w-[88%] rounded-[28px] rounded-bl-md border border-slate-200 bg-white px-5 py-5 text-sm leading-7 text-text-soft shadow-soft";
+
+        const titleEl = document.createElement("div");
+        titleEl.className = "mb-3 text-xs font-semibold uppercase tracking-[0.26em] text-slate-400";
+        titleEl.textContent = "Agent";
+        bubble.appendChild(titleEl);
+
+        const textEl = document.createElement("div");
+        textEl.className = "whitespace-pre-wrap break-words";
+        textEl.textContent = text;
+        bubble.appendChild(textEl);
+
+        wrapper.appendChild(bubble);
+        refs.conversation.appendChild(wrapper);
+        refs.conversation.scrollTop = refs.conversation.scrollHeight;
+        state.pendingBubble = { wrapper, textEl };
+      }
+
+      function updatePendingBubble(text) {
+        if (state.pendingBubble) {
+          state.pendingBubble.textEl.textContent = text;
+          refs.conversation.scrollTop = refs.conversation.scrollHeight;
+        }
+      }
+
+      function clearPendingBubble() {
+        if (!state.pendingBubble) {
+          return;
+        }
+
+        state.pendingBubble.wrapper.remove();
+        state.pendingBubble = null;
+      }
+
+      function renderStepGroup(requestId, steps, requestMetaInfo = {}) {
+        refs.stepEmptyState.classList.add("hidden");
+
+        const group = document.createElement("section");
+        group.className = "rounded-[24px] border border-slate-200 bg-surface-soft p-4 shadow-soft";
+
+        const header = document.createElement("div");
+        header.className = "mb-3 flex items-center justify-between gap-3";
+
+        const title = document.createElement("h3");
+        title.className = "text-sm font-semibold text-text-main";
+        title.textContent = `第 ${requestId} 次请求`;
+        header.appendChild(title);
+
+        const summaryMeta = document.createElement("span");
+        summaryMeta.className = "text-xs text-slate-500";
+        summaryMeta.textContent = steps.length ? `${steps.length} 个步骤` : "未调用工具";
+        header.appendChild(summaryMeta);
+
+        group.appendChild(header);
+
+        const requestMeta = document.createElement("p");
+        requestMeta.className = "mb-4 text-xs leading-5 text-text-soft";
+        requestMeta.textContent = `provider: ${requestMetaInfo.provider || "-"} / 附件: ${requestMetaInfo.fileCount || 0}`;
+        group.appendChild(requestMeta);
+
+        if (!steps.length) {
+          const empty = document.createElement("p");
+          empty.className = "text-sm leading-6 text-text-soft";
+          empty.textContent = "本轮没有工具调用，模型直接返回了结果。";
+          group.appendChild(empty);
+        } else {
+          const list = document.createElement("div");
+          list.className = "space-y-3";
+
+          steps.forEach((step, index) => {
+            const item = document.createElement("details");
+            item.className = "rounded-2xl border border-slate-200 bg-white px-4 py-3";
+
+            const summary = document.createElement("summary");
+            summary.className = "cursor-pointer list-none select-none";
+
+            const summaryRow = document.createElement("div");
+            summaryRow.className = "flex items-center justify-between gap-3";
+
+            const left = document.createElement("div");
+            left.className = "min-w-0";
+
+            const name = document.createElement("div");
+            name.className = "truncate text-sm font-medium text-text-main";
+            name.textContent = `${index + 1}. ${summarizeStepTitle(step)}`;
+            left.appendChild(name);
+
+            const stats = document.createElement("div");
+            stats.className = "mt-1 text-xs text-slate-400";
+            stats.textContent = describeStep(step);
+            left.appendChild(stats);
+
+            summaryRow.appendChild(left);
+
+            const toggle = document.createElement("span");
+            toggle.className = "text-xs text-slate-400";
+            toggle.textContent = "展开详情";
+            summaryRow.appendChild(toggle);
+
+            summary.appendChild(summaryRow);
+            item.appendChild(summary);
+
+            const body = document.createElement("div");
+            body.className = "mt-3 space-y-3 border-t border-slate-100 pt-3";
+
+            body.appendChild(buildStepBlock("参数", step.args || {}));
+            body.appendChild(buildStepBlock("结果", step.result || ""));
+
+            item.appendChild(body);
+            item.addEventListener("toggle", () => {
+              toggle.textContent = item.open ? "收起详情" : "展开详情";
+            });
+            list.appendChild(item);
+          });
+
+          group.appendChild(list);
+        }
+
+        refs.stepStream.prepend(group);
+      }
+
+      function describeStep(step) {
+        const args = step && typeof step.args === "object" && step.args !== null ? Object.keys(step.args).length : 0;
+        const resultText =
+          typeof step?.result === "string" ? step.result : JSON.stringify(step?.result || "", null, 2);
+        return `${args} 个参数键 / ${resultText.length} 字结果`;
+      }
+
+      function summarizeStepTitle(step) {
+        const toolName = step?.name || "tool_call";
+        const argsSummary = summarizeArgs(step?.args || {});
+        return argsSummary ? `${toolName}(${argsSummary})` : toolName;
+      }
+
+      function summarizeArgs(args) {
+        if (!args || typeof args !== "object" || Array.isArray(args)) {
+          return "";
+        }
+
+        const entries = Object.entries(args);
+        if (!entries.length) {
+          return "";
+        }
+
+        const summary = entries
+          .slice(0, 3)
+          .map(([key, value]) => `${key}=${summarizeArgValue(value)}`)
+          .join(", ");
+
+        if (entries.length > 3) {
+          return `${summary}, ...`;
+        }
+        return summary;
+      }
+
+      function summarizeArgValue(value) {
+        if (typeof value === "string") {
+          const normalized = value.replace(/\s+/g, " ").trim();
+          const preview = normalized.length <= 24 ? normalized : `${normalized.slice(0, 24)}...`;
+          return `"${preview}"`;
+        }
+        if (typeof value === "number" || typeof value === "boolean") {
+          return String(value);
+        }
+        if (Array.isArray(value)) {
+          return `[${value.length} items]`;
+        }
+        if (value && typeof value === "object") {
+          return `{${Object.keys(value).length} keys}`;
+        }
+        return "null";
+      }
+
+      function buildStepBlock(label, value) {
+        const block = document.createElement("div");
+
+        const title = document.createElement("div");
+        title.className = "mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400";
+        title.textContent = label;
+        block.appendChild(title);
+
+        const pre = document.createElement("pre");
+        pre.className =
+          "overflow-x-auto rounded-2xl bg-slate-950 px-4 py-3 text-xs leading-6 text-slate-100";
+        pre.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+        block.appendChild(pre);
+
+        return block;
+      }
+
+      function setSending(sending) {
+        state.sending = sending;
+        refs.sendButton.disabled = sending;
+        refs.sendButton.innerHTML = sending
+          ? '<span class="material-symbols-outlined text-base">hourglass_top</span>处理中...'
+          : '<span class="material-symbols-outlined text-base">send</span>发送请求';
+        refs.providerSelect.disabled = sending;
+        refs.attachButton.disabled = sending;
+        refs.messageInput.disabled = sending;
+        renderPendingFiles();
+      }
+
+      function setStatus(message) {
+        refs.statusLine.textContent = message;
+      }
+
+      function showError(message) {
+        refs.errorBox.textContent = message;
+        refs.errorBox.classList.remove("hidden");
+      }
+
+      function clearError() {
+        refs.errorBox.textContent = "";
+        refs.errorBox.classList.add("hidden");
+      }
+
+      async function requestJson(url, options = {}) {
+        const response = await fetch(url, options);
+        const payload = await parseJsonSafely(response);
+
+        if (!response.ok) {
+          const message =
+            payload?.error?.message ||
+            payload?.message ||
+            `请求失败：${response.status} ${response.statusText}`;
+          throw new Error(message);
+        }
+
+        return payload;
+      }
+
+      async function parseJsonSafely(response) {
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          const text = await response.text();
+          if (!text) {
+            return {};
+          }
+          return { message: text };
+        }
+
+        try {
+          return await response.json();
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function safeGetStorage(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function safeSetStorage(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch (error) {
+          return;
+        }
+      }
+
+      function formatBytes(size) {
+        if (!Number.isFinite(size) || size < 1024) {
+          return `${size || 0} B`;
+        }
+        if (size < 1024 * 1024) {
+          return `${(size / 1024).toFixed(1)} KB`;
+        }
+        return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+      }
+    </script>
+  </body>
+</html>
