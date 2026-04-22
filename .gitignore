@@ -7,3 +7,4 @@ Task6.md
 __pycache__/
 *.py[cod]
 .claude
+data/sample.db
