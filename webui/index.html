@@ -9,36 +9,83 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .scrollbar-thin::-webkit-scrollbar { width: 6px; }
     .scrollbar-thin::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
+
+    /* User bubble: soft blue with shadow */
+    .bubble-user {
+      background: linear-gradient(135deg, #5b8def 0%, #4f73e8 100%);
+      box-shadow: 0 2px 8px rgba(79, 115, 232, 0.3);
+    }
+
+    /* Agent bubble: light gray with subtle shadow */
+    .bubble-agent {
+      background: #f8fafc;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      border: 1px solid #e8ecf0;
+    }
+
+    /* Error bubble */
+    .bubble-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      box-shadow: 0 1px 4px rgba(239, 68, 68, 0.1);
+    }
+
+    /* Tool call card */
+    .tool-card {
+      background: #f8fafc;
+      border: 1px solid #e4e9ed;
+      border-left: 3px solid #4f86f7;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Input focus glow */
+    textarea:focus {
+      box-shadow: 0 0 0 3px rgba(79, 115, 232, 0.15);
+    }
+
+    /* Send button */
+    .btn-send {
+      background: linear-gradient(135deg, #5b8def 0%, #4f73e8 100%);
+      box-shadow: 0 2px 6px rgba(79, 115, 232, 0.35);
+      transition: all 0.2s ease;
+    }
+    .btn-send:hover:not(:disabled) {
+      box-shadow: 0 4px 12px rgba(79, 115, 232, 0.5);
+      transform: translateY(-1px);
+    }
+    .btn-send:active:not(:disabled) {
+      transform: translateY(0);
+    }
   </style>
 </head>
-<body class="bg-white text-gray-900 flex flex-col h-screen">
+<body class="bg-[#f8fafc] text-gray-800 flex flex-col h-screen">
   <!-- Top Bar -->
-  <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
+  <header class="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white">
     <h1 class="text-lg font-semibold text-gray-700">Mini Agent</h1>
     <div class="flex items-center gap-2">
       <span class="text-sm text-gray-500">Model:</span>
-      <select id="modelSelect" class="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <select id="modelSelect" class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300">
       </select>
     </div>
   </header>
 
   <!-- Chat Area -->
-  <main id="chatArea" class="flex-1 overflow-y-auto px-4 py-4 space-y-4 scrollbar-thin">
-    <div class="text-center text-gray-400 text-sm py-8">开始对话吧</div>
+  <main id="chatArea" class="flex-1 overflow-y-auto px-6 py-6 space-y-5 scrollbar-thin">
+    <div class="text-center text-gray-400 text-sm py-12">开始对话吧</div>
   </main>
 
   <!-- Input Area -->
-  <footer class="border-t border-gray-200 px-4 py-3 bg-white">
-    <div class="flex items-end gap-2">
-      <button id="uploadBtn" class="text-gray-400 hover:text-gray-600 p-2 flex-shrink-0" title="上传文件">
+  <footer class="border-t border-gray-200 px-5 py-4 bg-white">
+    <div class="flex items-end gap-3">
+      <button id="uploadBtn" class="text-gray-400 hover:text-gray-600 p-2.5 flex-shrink-0 rounded-lg hover:bg-gray-100 transition-colors" title="上传文件">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
         </svg>
       </button>
       <input type="file" id="fileInput" class="hidden" multiple>
       <textarea id="messageInput" rows="1" placeholder="输入内容..."
-        class="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-      <button id="sendBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 flex-shrink-0">发送</button>
+        class="flex-1 resize-none border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50 focus:outline-none focus:border-indigo-300"></textarea>
+      <button id="sendBtn" class="btn-send text-white px-5 py-2.5 rounded-xl text-sm font-medium flex-shrink-0">发送</button>
     </div>
   </footer>
 
@@ -123,11 +170,11 @@
 
       const bubble = document.createElement('div');
       if (role === 'user') {
-        bubble.className = 'bg-indigo-600 text-white rounded-2xl px-4 py-2 max-w-xs';
+        bubble.className = 'bubble-user text-white rounded-2xl px-4 py-2.5 max-w-xs';
       } else if (isError) {
-        bubble.className = 'bg-red-100 text-red-700 rounded-2xl px-4 py-2 max-w-2xl';
+        bubble.className = 'bubble-error text-red-700 rounded-2xl px-4 py-2.5 max-w-2xl';
       } else {
-        bubble.className = 'bg-gray-100 text-gray-800 rounded-2xl px-4 py-2 max-w-2xl';
+        bubble.className = 'bubble-agent text-gray-800 rounded-2xl px-4 py-2.5 max-w-2xl';
       }
 
       const contentDiv = document.createElement('div');
@@ -155,7 +202,7 @@
       div.className = 'flex justify-start';
 
       const inner = document.createElement('div');
-      inner.className = 'text-sm text-gray-500 font-mono bg-gray-50 rounded px-3 py-1 max-w-2xl';
+      inner.className = 'tool-card text-sm font-mono rounded-lg px-4 py-2.5 max-w-2xl';
       inner.style.cursor = 'pointer';
 
       const icon = document.createElement('span');
