@@ -3,3 +3,4 @@ logs
 .env
 docs
 Task6.md
+adapters/__pycache__/server.cpython-310.pyc

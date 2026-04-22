@@ -1,11 +1,10 @@
 import json
 import logging
-from pathlib import Path
 from typing import Optional, Callable
 
-from .llm import LLM
-from .skills import SkillLoader
-from .tools import ToolRegistry
+from core.llm import LLM
+from core.skills import SkillLoader
+from core.tools import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +45,11 @@ class Agent:
         system_prompt = self._build_system_prompt()
 
         if image_paths:
+            image_type = "image_url" if self.llm.supports_vision else "text"
             content = [
                 {"type": "text", "text": user_text},
                 *[
-                    {"type": "image_url", "image_url": {"url": path}}
+                    {"type": image_type, "image_url": {"url": path}}
                     for path in image_paths
                 ]
             ]

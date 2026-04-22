@@ -1,6 +1,11 @@
 import logging
 from typing import Callable
 
+from core.skills import get_skill_loader
+from tools_builtin.shell import bash_tool
+from tools_builtin.file_ops import read_tool,write_tool
+from tools_builtin.skill_ops import activate_skill_tool
+
 logger = logging.getLogger(__name__)
 
 class ToolRegistry:
@@ -9,7 +14,9 @@ class ToolRegistry:
 
     def register(self, schema:dict, handler: Callable):
         """注册一个工具"""
-        self.tools[schema["function"]["name"]] = {"schema": schema, "handler": handler}
+        tool_name = schema["function"]["name"]
+        self.tools[tool_name] = {"schema": schema, "handler": handler}
+        logger.info(f"register tool : {tool_name}")
 
     def get_openai_schemas(self) -> list[dict]:
         """返回 OpenAI function calling 格式的 tools 列表"""
@@ -30,3 +37,12 @@ class ToolRegistry:
             return str(result)
         except Exception as e:
             return f"Error executing tool '{name}': {str(e)}"
+
+def register_tools() -> ToolRegistry:
+    tool_registry = ToolRegistry()
+    tool_registry.register(*read_tool())
+    tool_registry.register(*write_tool())
+    tool_registry.register(*bash_tool())
+    tool_registry.register(*activate_skill_tool(get_skill_loader()))
+
+    return tool_registry

@@ -1,18 +1,22 @@
 import re
-from pathlib import Path
-from dataclasses import dataclass
-from typing import Optional
 import yaml
+import logging
+from pathlib import Path
+from typing import Optional
+from dataclasses import dataclass
+
+from core.utils import load_config
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class SkillMeta:
     name: str
     description: str
     path: Path
-    # 可选字段: license, compatibility, metadata(dict)
 
 class SkillLoader:
-    def __init__(self, skills_dir: Path, enabled: Optional[list[str]] = None):
+    def __init__(self, skills_dir: Path | None, enabled: Optional[list[str]] = None):
         """
         skills_dir: skills/ 目录
         enabled: 启用的 skill 名字列表(None 表示全部启用)
@@ -28,6 +32,9 @@ class SkillLoader:
         - name 必填,只能小写字母/数字/连字符,<=64 字符
         - description 必填,<=1024 字符,不含尖括号
         """
+        if self.skills_dir is None:
+            return
+
         name_pattern = re.compile(r"^[a-z0-9-]+$")
 
         for skill_dir in self.skills_dir.iterdir():
@@ -98,3 +105,14 @@ class SkillLoader:
 
         # 返回去掉 frontmatter 的正文，去除首尾空白
         return parts[2].strip() if len(parts) >= 3 else ""
+
+def get_skill_loader() -> SkillLoader:
+    config = load_config()
+    try:
+        skills_dir = Path(config["skills"]["dir"])
+    except KeyError:
+        logger.error("Skills directory not configured")
+        skills_dir = None
+    skill_loader = SkillLoader(skills_dir)
+    skill_loader.scan()
+    return skill_loader

@@ -1,7 +1,7 @@
 import logging
+from openai import OpenAI
 from dataclasses import dataclass
 from typing import Literal, Optional
-from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ class LLM:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=all_messages,
-            tools=tools
+            tools=tools,
         )
 
         logger.debug(f"LLM raw response: {response}")
@@ -77,5 +77,5 @@ class LLM:
         return LLMResponse(
             content=msg.content,
             tool_calls=msg.tool_calls,
-            reasoning_content=getattr(msg, 'reasoning_content', None)
+            reasoning_content=getattr(msg, "reasoning_content", None),
         )

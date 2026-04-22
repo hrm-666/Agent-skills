@@ -27,6 +27,6 @@ webui:
 # 日志配置
 logging:
   dir: ./logs           # 日志文件目录
-  level: INFO           # 最低日志级别 (DEBUG/INFO/WARNING/ERROR)
+  level: INFO          # 最低日志级别 (DEBUG/INFO/WARNING/ERROR)
   console: true         # 启用彩色控制台输出 (via rich)
   file: true            # 启用文件输出
