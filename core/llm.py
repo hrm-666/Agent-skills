@@ -270,14 +270,21 @@ class LLM:
                     continue
 
                 image_url = block["image_url"]["url"]
+                if image_url.startswith("data:"):
+                    text = (
+                        "[image input downgraded for deepseek: image content omitted, "
+                        f"source_length={len(image_url)}]"
+                    )
+                else:
+                    text = f"[image input downgraded for deepseek] {image_url}"
                 self.logger.warning(
                     "DeepSeek 不支持视觉输入，已将图片输入降级为文本: %s",
-                    image_url,
+                    text,
                 )
                 downgraded_blocks.append(
                     {
                         "type": "text",
-                        "text": f"[image input downgraded for deepseek] {image_url}",
+                        "text": text,
                     }
                 )
 

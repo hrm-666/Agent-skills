@@ -52,9 +52,11 @@ class ToolRegistry:
         """执行工具并统一返回字符串。"""
         if name not in self.tools:
             available = ", ".join(sorted(self.tools)) or "none"
-            return f"[error] Unknown tool: {name}. Available tools: {available}"
+            self.logger.warning("调用了未知工具: %s", name)
+            return f"[error] unknown tool: {name}. Available tools: {available}"
         if not isinstance(arguments, dict):
-            return f"[error] Invalid arguments for tool '{name}': arguments must be an object"
+            self.logger.warning("工具参数不是对象: tool=%s, args_type=%s", name, type(arguments).__name__)
+            return f"[error] invalid arguments for tool '{name}': arguments must be an object"
 
         self.logger.info("执行工具: %s, args=%s", name, arguments)
         handler = self.tools[name]["handler"]
@@ -63,9 +65,23 @@ class ToolRegistry:
             result = handler(**arguments)
         except TypeError as exc:
             self.logger.exception("工具参数错误: %s", name)
-            return f"[error] Tool '{name}' arguments mismatch: {exc}"
+            return f"[error] tool '{name}' arguments mismatch: {exc}"
         except Exception as exc:
             self.logger.exception("工具执行失败: %s", name)
-            return f"[error] Tool '{name}' failed: {exc}"
+            return f"[error] tool '{name}' failed: {exc}"
 
-        return str(result)
+        result_text = str(result)
+        self.logger.info(
+            "工具执行完成: %s, result_length=%d, result_preview=%s",
+            name,
+            len(result_text),
+            self._summarize_text(result_text),
+        )
+        return result_text
+
+    def _summarize_text(self, text: str, limit: int = 160) -> str:
+        """把工具返回值压缩成单行摘要，便于写入日志。"""
+        normalized = " ".join(text.split())
+        if len(normalized) <= limit:
+            return normalized
+        return normalized[:limit] + "...[truncated]"

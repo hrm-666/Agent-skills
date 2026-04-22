@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Literal, Sequence
 
 import yaml
-from adapters import run_cli_once, run_cli_repl
+from adapters import run_cli_once, run_cli_repl, run_webui_server
 from core import (
     Agent,
     LLM,
@@ -56,6 +56,7 @@ from tools_builtin import (
 
 
 ProviderName = Literal["kimi", "qwen", "deepseek"]
+_LOGGING_STATE: dict[str, object] | None = None
 
 
 class ProviderConfig(BaseModel):
@@ -179,16 +180,29 @@ def load_config(config_path: Path) -> AppConfig:
 
 def setup_logging(root_dir: Path) -> tuple[logging.Logger, Path]:
     """初始化文件日志与富文本控制台日志。"""
+    global _LOGGING_STATE
+
+    resolved_root = root_dir.resolve()
     logs_dir = root_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
 
     log_path = logs_dir / f"agent-{datetime.now().date().isoformat()}.log"
+    root_logger = logging.getLogger()
+    logger = logging.getLogger("mini_agent.bootstrap")
+
+    if (
+        _LOGGING_STATE is not None
+        and _LOGGING_STATE.get("root_dir") == resolved_root
+        and _LOGGING_STATE.get("log_path") == log_path
+        and root_logger.handlers
+    ):
+        logger.debug("日志系统已初始化，复用现有 handlers: %s", log_path)
+        return logger, log_path
+
     formatter = logging.Formatter(
         "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-
-    root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
 
     for handler in list(root_logger.handlers):
@@ -216,7 +230,10 @@ def setup_logging(root_dir: Path) -> tuple[logging.Logger, Path]:
     for logger_name in ("openai", "httpx", "httpcore"):
         logging.getLogger(logger_name).setLevel(logging.WARNING)
 
-    logger = logging.getLogger("mini_agent.bootstrap")
+    _LOGGING_STATE = {
+        "root_dir": resolved_root,
+        "log_path": log_path,
+    }
     logger.debug("日志初始化完成: %s", log_path)
     return logger, log_path
 
@@ -428,13 +445,17 @@ def build_setup_context() -> BootstrapContext:
 
 def get_provider_status_dicts() -> list[dict[str, object]]:
     """返回后续 WebUI 可直接使用的 provider 状态。"""
-    load_env_file(get_project_root())
+    project_root = get_project_root()
+    load_env_file(project_root)
+    active_provider = load_config(project_root / "config.yaml").active_provider
+
     return [
         {
             "name": status.name,
             "supports_vision": status.supports_vision,
             "configured": status.configured,
             "default_model": status.default_model,
+            "is_active": status.name == active_provider,
         }
         for status in list_provider_statuses()
     ]
@@ -443,9 +464,9 @@ def get_provider_status_dicts() -> list[dict[str, object]]:
 def _create_argument_parser() -> argparse.ArgumentParser:
     """创建命令行参数解析器。"""
     parser = argparse.ArgumentParser(
-        description="Mini Agent 统一入口。",
+        description="Mini Agent 统一入口。直接运行不带子命令时默认启动 WebUI。",
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command")
 
     cli_parser = subparsers.add_parser(
         "cli",
@@ -471,13 +492,13 @@ def _create_argument_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser(
         "webui",
-        help="预留的 WebUI 启动入口",
-        description="启动 WebUI（将在后续 Phase 实现）。",
+        help="启动 WebUI 服务",
+        description="启动 Mini Agent WebUI 服务。",
     )
     setup_parser = subparsers.add_parser(
         "setup",
-        help="预留的示例数据初始化入口",
-        description="初始化示例数据（将在后续 Phase 实现）。",
+        help="初始化示例数据",
+        description="初始化示例 SQLite 数据库 sample.db。",
     )
     setup_parser.add_argument(
         "--force",
@@ -511,7 +532,14 @@ def _run_webui_command() -> int:
     """执行 webui 子命令。"""
     context = build_setup_context()
     ensure_sample_db_exists(context.root_dir, context.logger)
-    print("webui 命令将在 Phase 3 实现。")
+    run_webui_server(
+        root_dir=context.root_dir,
+        host=context.config.webui.host,
+        port=context.config.webui.port,
+        build_runtime=build_runtime,
+        get_provider_statuses=get_provider_status_dicts,
+        logger=logging.getLogger("mini_agent.server"),
+    )
     return 0
 
 
@@ -533,6 +561,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.command is None:
+            return _run_webui_command()
         if args.command == "cli":
             return _run_cli_command(args)
         if args.command == "webui":

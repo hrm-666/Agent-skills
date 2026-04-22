@@ -85,10 +85,10 @@ def execute_shell_command(
         )
     except subprocess.TimeoutExpired:
         shell_logger.warning("shell 命令超时: command=%s, timeout=%s", normalized_command, timeout)
-        return f"[error] Command timed out after {timeout} seconds"
+        return f"[error] command timed out after {timeout} seconds"
     except Exception as exc:
         shell_logger.exception("shell 命令执行异常: %s", normalized_command)
-        return f"[error] Failed to execute command: {exc}"
+        return f"[error] failed to execute command: {exc}"
 
     shell_logger.info(
         "shell 命令执行完成: exit_code=%s, command=%s",
@@ -98,6 +98,12 @@ def execute_shell_command(
 
     stdout_text = _decode_output(completed.stdout)
     stderr_text = _decode_output(completed.stderr)
+    shell_logger.info(
+        "shell 输出摘要: exit_code=%s, stdout_length=%d, stderr_length=%d",
+        completed.returncode,
+        len(stdout_text),
+        len(stderr_text),
+    )
     result = (
         f"[exit_code={completed.returncode}]\n"
         f"STDOUT:\n{stdout_text}\n"

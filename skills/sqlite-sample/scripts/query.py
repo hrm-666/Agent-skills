@@ -22,17 +22,17 @@ def get_default_db_path() -> Path:
 def normalize_sql(raw_sql: str) -> str:
     """校验并规范化 SQL。"""
     if not isinstance(raw_sql, str) or not raw_sql.strip():
-        raise ValueError("Error: --sql is required and must be a non-empty string.")
+        raise ValueError("[error] --sql is required and must be a non-empty string.")
 
     sql = raw_sql.strip()
     lowered = sql.lower()
     if not lowered.startswith("select"):
-        raise ValueError("Error: only SELECT queries are allowed.")
+        raise ValueError("[error] only SELECT queries are allowed.")
 
     # 只允许单条语句；去掉尾部分号后再检查中间是否残留分号。
     sql = sql.rstrip().rstrip(";").strip()
     if ";" in sql:
-        raise ValueError("Error: multiple SQL statements are not allowed.")
+        raise ValueError("[error] multiple SQL statements are not allowed.")
 
     if not re.search(r"\blimit\b", sql, flags=re.IGNORECASE):
         sql = f"{sql} LIMIT {DEFAULT_LIMIT}"
@@ -44,7 +44,7 @@ def run_query(sql: str, db_path: Path) -> dict[str, object]:
     """执行查询并返回结构化结果。"""
     if not db_path.exists():
         raise FileNotFoundError(
-            f"Error: database file not found: {db_path}. Run data/seed_sample_db.py first."
+            f"[error] database file not found: {db_path}. Run data/seed_sample_db.py first."
         )
 
     conn = sqlite3.connect(db_path)

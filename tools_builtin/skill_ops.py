@@ -54,16 +54,24 @@ def activate_skill_by_name(
     skill_logger = logger or logging.getLogger("mini_agent.skill_ops")
 
     if not isinstance(name, str) or not name.strip():
+        skill_logger.warning("activate_skill 参数无效: name=%s", name)
         return "[error] name must be a non-empty string"
 
     normalized_name = name.strip()
     skill_logger.info("激活 skill: %s", normalized_name)
 
     try:
-        return skill_loader.load_body(normalized_name)
+        body = skill_loader.load_body(normalized_name)
+        skill_logger.info(
+            "skill 激活完成: name=%s, body_length=%d",
+            normalized_name,
+            len(body),
+        )
+        return body
     except KeyError:
         available = ", ".join(sorted(skill_loader.catalog)) or "none"
-        return f"Error: skill '{normalized_name}' not found. Available: {available}"
+        skill_logger.warning("skill 不存在: %s", normalized_name)
+        return f"[error] skill '{normalized_name}' not found. Available: {available}"
     except Exception as exc:
         skill_logger.exception("激活 skill 失败: %s", normalized_name)
-        return f"[error] Failed to activate skill '{normalized_name}': {exc}"
+        return f"[error] failed to activate skill '{normalized_name}': {exc}"
