@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """只允许 SELECT 查询的 SQLite 工具脚本。"""
-
-import argparse
-import json
 import re
-import sqlite3
 import sys
+import json
+import argparse
+import sqlite3
 from pathlib import Path
 
 _DEFAULT_DB = str(Path(__file__).parent.parent.parent.parent / "data/sample.db")

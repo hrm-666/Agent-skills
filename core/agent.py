@@ -78,7 +78,7 @@ class Agent:
 
             # 回调（用于 WebUI 进度展示）
             if on_step:
-                on_step(iteration, response)
+                on_step(response)
 
             # 处理工具调用
             if response.tool_calls:

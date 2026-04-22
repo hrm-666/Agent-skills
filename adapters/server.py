@@ -94,7 +94,7 @@ def chat(request: ChatRequest):
 
     steps = []
 
-    def onstep(iteration, response: "LLMResponse") -> None:
+    def onstep(response: "LLMResponse") -> None:
         if response.tool_calls:
             for tool_call in response.tool_calls:
                 steps.append({
