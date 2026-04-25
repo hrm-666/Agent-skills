@@ -1,26 +1,39 @@
 from __future__ import annotations
 
-import logging
 import subprocess
+from pathlib import Path
 
-logger = logging.getLogger(__name__)
-MAX_CHARS = 10000
+MAX_OUTPUT_CHARS = 10000
 
 
-def bash(command: str, timeout: int = 60) -> str:
-    """执行 shell 命令并返回 stdout + stderr。"""
-    logger.info("bash command=%s timeout=%s", command, timeout)
-    try:
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
+def create_bash_handler(project_root: Path, logger):
+    def bash(command: str, timeout: int = 60) -> str:
+        timeout = max(1, min(int(timeout), 600))
+        logger.info("bash call: %s", command)
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                cwd=str(project_root),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            logger.error("bash timeout: %s", command)
+            return f"[error] command timed out after {timeout}s"
+        except Exception as exc:
+            logger.error("bash failure: %s", exc)
+            return f"[error] command failed: {exc}"
+
+        output = (
+            f"[exit_code={result.returncode}]\n"
+            f"STDOUT:\n{result.stdout}\n"
+            f"STDERR:\n{result.stderr}"
         )
-    except subprocess.TimeoutExpired:
-        return f"[error] command timed out after {timeout}s"
+        if len(output) > MAX_OUTPUT_CHARS:
+            output = output[:MAX_OUTPUT_CHARS] + "\n...[truncated]"
+        logger.debug("bash result: %s", output)
+        return output
 
-    stdout = result.stdout[:MAX_CHARS]
-    stderr = result.stderr[:MAX_CHARS]
-    return f"[exit_code={result.returncode}]\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
+    return bash

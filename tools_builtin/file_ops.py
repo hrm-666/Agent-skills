@@ -3,39 +3,48 @@ from __future__ import annotations
 from pathlib import Path
 
 MAX_CHARS = 10000
-ALLOWED_WRITE_DIRS = ("workspace", "uploads", "logs")
 
 
-def read(path: str) -> str:
-    """读文本文件，最多返回 10000 个字符。"""
-    file_path = Path(path).expanduser()
-    if not file_path.is_absolute():
-        file_path = Path.cwd() / file_path
+def create_file_handlers(project_root: Path):
+    allowed_write_roots = [
+        (project_root / "workspace").resolve(),
+        (project_root / "uploads").resolve(),
+        (project_root / "logs").resolve(),
+    ]
 
-    try:
-        text = file_path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return f"[error] binary file not supported: {file_path}"
-    except FileNotFoundError:
-        return f"[error] file not found: {file_path}"
+    def resolve_path(raw_path: str) -> Path:
+        candidate = Path(raw_path).expanduser()
+        if not candidate.is_absolute():
+            candidate = (project_root / candidate).resolve()
+        else:
+            candidate = candidate.resolve()
+        return candidate
 
-    if len(text) > MAX_CHARS:
-        return text[:MAX_CHARS] + "\n...[truncated to 10000 chars]"
-    return text
+    def read(path: str) -> str:
+        target = resolve_path(path)
+        if not target.exists() or not target.is_file():
+            return f"[error] File not found: {path}"
 
+        head = target.read_bytes()[:4096]
+        if b"\x00" in head:
+            return "[error] Binary file is not supported by read tool"
 
-def write(path: str, content: str) -> str:
-    """只允许写入 workspace、uploads、logs。"""
-    file_path = Path(path).expanduser()
-    if not file_path.is_absolute():
-        file_path = Path.cwd() / file_path
+        try:
+            content = target.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return "[error] Binary or non-UTF8 file is not supported by read tool"
 
-    allowed_roots = [(Path.cwd() / name).resolve() for name in ALLOWED_WRITE_DIRS]
-    resolved = file_path.resolve()
+        if len(content) > MAX_CHARS:
+            return f"{content[:MAX_CHARS]}\n...[truncated, total={len(content)} chars]"
+        return content
 
-    if not any(root == resolved or root in resolved.parents for root in allowed_roots):
-        return f"[error] write path not allowed: {resolved}"
+    def write(path: str, content: str) -> str:
+        target = resolve_path(path)
+        if not any(target.is_relative_to(root) for root in allowed_write_roots):
+            return "[error] write only allowed under workspace/, uploads/, logs/"
 
-    resolved.parent.mkdir(parents=True, exist_ok=True)
-    resolved.write_text(content, encoding="utf-8")
-    return f"OK: wrote {len(content)} chars to {resolved}"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        return f"Wrote {len(content)} chars to {target}"
+
+    return read, write

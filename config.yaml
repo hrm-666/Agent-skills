@@ -1,10 +1,8 @@
-active_provider: kimi
+active_provider: openrouter
 
 providers:
-  kimi:
-    model: kimi-k2.5
-  qwen:
-    model: qwen-vl-max
+  openrouter:
+    model: moonshotai/kimi-k2.5
   deepseek:
     model: deepseek-chat
 
@@ -18,3 +16,6 @@ agent:
 webui:
   host: 127.0.0.1
   port: 8000
+
+logging:
+  level: INFO

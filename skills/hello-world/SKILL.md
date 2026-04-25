@@ -1,24 +1,20 @@
 ---
 name: hello-world
-description: Greet the user by name and demonstrate the skill activation mechanism. Use when the user says hello, hi, 你好, or explicitly asks to test the skill system.
+description: Greet the user by name and demonstrate the skill activation mechanism. Use when user says hello, hi, 你好, or asks to test skills.
 ---
 
 # Hello World Skill
 
-This skill exists to verify that skill activation and bash execution work correctly.
+This skill verifies that skill activation and bash execution work correctly.
 
-## How to use
+## How To Use
 
-1. Extract the user's name from their message (default to "朋友" if not given).
-2. Run the greeting script:
-
-       bash: python skills/hello-world/scripts/hello.py "<name>"
-
-3. Return the script's output to the user.
+1. Extract the user's name from their message (default to "朋友").
+2. Run: `python skills/hello-world/scripts/hello.py "<name>"`
+3. Return the script output as the final response.
 
 ## Example
 
-User: "你好,我叫席朋飞"
-Action: `python skills/hello-world/scripts/hello.py "席朋飞"`
-Output: `你好,席朋飞!Mini Agent 已经正常运作。`
-Response to user: 你好,席朋飞!Mini Agent 已经正常运作。
+User: "你好,我叫小明"
+Action: `python skills/hello-world/scripts/hello.py "小明"`
+Output: `你好,小明!Mini Agent 已经正常运作。`

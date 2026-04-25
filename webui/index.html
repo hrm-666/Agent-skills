@@ -1,72 +1,157 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mini Agent</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-neutral-50 text-neutral-900">
-  <div class="mx-auto max-w-5xl p-6">
-    <div class="mb-4 flex items-center justify-between border-b border-neutral-200 pb-4">
+<body class="bg-neutral-100 text-neutral-900">
+  <div class="mx-auto max-w-5xl p-4 md:p-6 h-screen flex flex-col">
+    <header class="flex items-center justify-between border-b border-neutral-200 pb-3">
       <h1 class="text-xl font-semibold">Mini Agent</h1>
-      <select id="provider" class="rounded border border-neutral-300 px-3 py-2"></select>
-    </div>
-    <div id="events" class="mb-4 min-h-[420px] rounded border border-neutral-200 bg-white p-4"></div>
-    <div class="rounded border border-neutral-200 bg-white p-4">
-      <input id="file" type="file" multiple class="mb-3 block">
-      <textarea id="text" class="mb-3 w-full rounded border border-neutral-300 p-3" rows="4" placeholder="输入内容..."></textarea>
-      <button id="send" class="rounded bg-indigo-600 px-4 py-2 text-white">发送</button>
-    </div>
-  </div>
-  <script>
-    const events = document.getElementById('events');
-    const provider = document.getElementById('provider');
-    const text = document.getElementById('text');
-    const fileInput = document.getElementById('file');
-    const uploadPaths = [];
+      <select id="modelSelect" class="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm"></select>
+    </header>
 
-    function appendLine(content) {
-      const div = document.createElement('div');
-      div.className = 'mb-2 whitespace-pre-wrap text-sm';
-      div.textContent = content;
-      events.appendChild(div);
+    <main id="chat" class="flex-1 overflow-y-auto py-4 space-y-3"></main>
+
+    <section class="border-t border-neutral-200 pt-3">
+      <div id="uploadList" class="mb-2 text-sm text-neutral-600"></div>
+      <div class="flex items-end gap-2">
+        <button id="attachBtn" class="rounded-md border border-neutral-300 px-3 py-2 bg-white">📎</button>
+        <textarea id="input" rows="3" class="flex-1 rounded-md border border-neutral-300 bg-white px-3 py-2" placeholder="输入内容... Enter发送，Shift+Enter换行"></textarea>
+        <button id="sendBtn" class="rounded-md bg-indigo-600 px-4 py-2 text-white">发送</button>
+      </div>
+      <input id="fileInput" type="file" class="hidden" multiple />
+    </section>
+  </div>
+
+  <script>
+    const chatEl = document.getElementById('chat');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const attachBtn = document.getElementById('attachBtn');
+    const fileInput = document.getElementById('fileInput');
+    const uploadList = document.getElementById('uploadList');
+    const modelSelect = document.getElementById('modelSelect');
+
+    let pendingFiles = [];
+
+    function appendBubble(role, text, extra = '') {
+      const wrap = document.createElement('div');
+      wrap.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
+      wrap.innerHTML = `<div class="max-w-3xl rounded-lg px-4 py-3 ${role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-neutral-200'}">
+        <div class="text-sm whitespace-pre-wrap">${text}</div>
+        ${extra ? `<div class="mt-2 text-xs opacity-80 whitespace-pre-wrap">${extra}</div>` : ''}
+      </div>`;
+      chatEl.appendChild(wrap);
+      chatEl.scrollTop = chatEl.scrollHeight;
     }
 
-    async function loadProviders() {
-      const items = await fetch('/api/providers').then(r => r.json());
-      items.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.name;
-        option.textContent = item.name;
-        provider.appendChild(option);
+    function appendSteps(steps) {
+      if (!steps || !steps.length) return;
+      const lines = steps.map(s => `🔧 ${s.name}(${JSON.stringify(s.args || {})})\n${(s.result || '').slice(0, 400)}`);
+      appendBubble('agent', '工具执行过程', lines.join('\n\n'));
+    }
+
+    function refreshUploadList() {
+      if (!pendingFiles.length) {
+        uploadList.textContent = '';
+        return;
+      }
+      uploadList.textContent = `待上传: ${pendingFiles.map(f => f.name).join(', ')}`;
+    }
+
+    async function fetchProviders() {
+      const resp = await fetch('/api/providers');
+      const list = await resp.json();
+      modelSelect.innerHTML = '';
+      list.forEach(p => {
+        (p.models || []).forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = `${p.name}|${m}`;
+          opt.textContent = `${p.name} / ${m}${p.configured ? '' : ' (未配置密钥)'}`;
+          modelSelect.appendChild(opt);
+        });
+      });
+      const saved = localStorage.getItem('mini-agent-model');
+      if (saved) {
+        modelSelect.value = saved;
+      }
+      modelSelect.addEventListener('change', () => {
+        localStorage.setItem('mini-agent-model', modelSelect.value);
       });
     }
 
-    fileInput.addEventListener('change', async () => {
-      for (const file of fileInput.files) {
-        const form = new FormData();
-        form.append('file', file);
-        const result = await fetch('/api/upload', { method: 'POST', body: form }).then(r => r.json());
-        uploadPaths.push(result.path);
+    async function uploadPendingFiles() {
+      const paths = [];
+      for (const file of pendingFiles) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+        if (!resp.ok) throw new Error('上传失败');
+        const data = await resp.json();
+        paths.push(data.path);
+      }
+      pendingFiles = [];
+      refreshUploadList();
+      return paths;
+    }
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text && !pendingFiles.length) return;
+
+      const selected = modelSelect.value.split('|');
+      const provider = selected[0] || null;
+      const model = selected[1] || null;
+      const fileNames = pendingFiles.map(f => f.name);
+
+      appendBubble('user', text || '[仅上传文件]', fileNames.length ? `附件: ${fileNames.join(', ')}` : '');
+      inputEl.value = '';
+
+      try {
+        const image_paths = await uploadPendingFiles();
+        const resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ text: text || '请读取我上传的文件', image_paths, provider, model })
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          appendBubble('agent', '请求失败', JSON.stringify(data));
+          return;
+        }
+        appendSteps(data.steps || []);
+        appendBubble('agent', data.reply || '(无回复)');
+      } catch (err) {
+        appendBubble('agent', '请求异常', String(err));
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    attachBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      pendingFiles.push(...Array.from(fileInput.files || []));
+      fileInput.value = '';
+      refreshUploadList();
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
       }
     });
 
-    document.getElementById('send').addEventListener('click', async () => {
-      appendLine(`User: ${text.value}`);
-      const result = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.value, image_paths: uploadPaths, provider: provider.value })
-      }).then(r => r.json());
-      (result.steps || []).forEach(step => appendLine(`🔧 ${step.name}`));
-      appendLine(`Agent: ${result.reply}`);
-      text.value = '';
-      uploadPaths.length = 0;
-      fileInput.value = '';
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      pendingFiles.push(...Array.from(e.dataTransfer.files || []));
+      refreshUploadList();
     });
 
-    loadProviders();
+    fetchProviders();
   </script>
 </body>
 </html>
