@@ -1,0 +1,70 @@
+<h2>响应式断点策略</h2>
+<p class="subtitle">你提到响应式设计不够好，来确定如何适配不同屏幕</p>
+
+<div class="section">
+  <p>已确定：右侧边栏布局 + 暖灰配色 + 宽松舒适密度。现在需要解决响应式问题 - 在小屏幕上如何处理右侧边栏？</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="stack-below" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>堆叠到下方</h3>
+      <p><strong>行为：</strong>小屏幕时，工具面板移到对话区域下方，变成全宽布局</p>
+      <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;">
+        <div style="margin-bottom: 0.5rem;"><strong>桌面（>1024px）：</strong>左右分栏</div>
+        <div style="margin-bottom: 0.5rem;"><strong>平板（768-1024px）：</strong>左右分栏，比例调整</div>
+        <div><strong>手机（<768px）：</strong>工具面板在下方</div>
+      </div>
+      <p style="margin-top: 0.8rem; font-size: 0.9em; color: #6b7280;">优点：所有信息始终可见，无需额外操作。缺点：移动端需要滚动查看工具。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="collapsible-drawer" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>可折叠抽屉</h3>
+      <p><strong>行为：</strong>小屏幕时，工具面板变成可展开/收起的浮动抽屉，默认隐藏</p>
+      <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;">
+        <div style="margin-bottom: 0.5rem;"><strong>桌面（>1024px）：</strong>左右分栏，固定显示</div>
+        <div style="margin-bottom: 0.5rem;"><strong>平板（768-1024px）：</strong>可折叠侧边栏</div>
+        <div><strong>手机（<768px）：</strong>底部抽屉，点击按钮展开</div>
+      </div>
+      <p style="margin-top: 0.8rem; font-size: 0.9em; color: #6b7280;">优点：移动端对话区域最大化。缺点：需要手动展开才能看工具。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="tab-switch" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>标签切换</h3>
+      <p><strong>行为：</strong>小屏幕时，通过顶部标签在"对话"和"工具"视图间切换</p>
+      <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;">
+        <div style="margin-bottom: 0.5rem;"><strong>桌面（>1024px）：</strong>左右分栏</div>
+        <div style="margin-bottom: 0.5rem;"><strong>平板（768-1024px）：</strong>标签切换</div>
+        <div><strong>手机（<768px）：</strong>标签切换</div>
+      </div>
+      <p style="margin-top: 0.8rem; font-size: 0.9em; color: #6b7280;">优点：界面最简洁，每个视图都是全屏。缺点：无法同时看对话和工具。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="adaptive-priority" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>自适应优先级</h3>
+      <p><strong>行为：</strong>根据屏幕大小智能调整，结合多种策略</p>
+      <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;">
+        <div style="margin-bottom: 0.5rem;"><strong>桌面（>1280px）：</strong>左右分栏，比例 60:40</div>
+        <div style="margin-bottom: 0.5rem;"><strong>笔记本（1024-1280px）：</strong>左右分栏，比例 65:35</div>
+        <div style="margin-bottom: 0.5rem;"><strong>平板（768-1024px）：</strong>可折叠侧边栏</div>
+        <div><strong>手机（<768px）：</strong>底部抽屉</div>
+      </div>
+      <p style="margin-top: 0.8rem; font-size: 0.9em; color: #6b7280;">优点：每个尺寸都有最优体验。缺点：实现复杂度最高。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+  <p class="label">推荐</p>
+  <p>如果你主要在桌面使用，选 A 或 B 即可。如果经常在移动端使用，推荐 D（自适应优先级）。</p>
+</div>

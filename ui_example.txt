@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#fefcff",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#d8dadc",
+                    "on-tertiary-container": "#fffbff",
+                    "tertiary-container": "#b75b00",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#723600",
+                    "surface": "#f7f9fb",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#f2f4f6",
+                    "on-primary-fixed": "#001a42",
+                    "outline": "#727785",
+                    "on-tertiary-fixed": "#311400",
+                    "secondary-fixed": "#d8e3fb",
+                    "on-surface-variant": "#424754",
+                    "outline-variant": "#c2c6d6",
+                    "secondary-fixed-dim": "#bcc7de",
+                    "error": "#ba1a1a",
+                    "background": "#f7f9fb",
+                    "primary-container": "#2170e4",
+                    "primary": "#0058be",
+                    "surface-container-high": "#e6e8ea",
+                    "on-primary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed": "#111c2d",
+                    "on-surface": "#191c1e",
+                    "surface-tint": "#005ac2",
+                    "tertiary-fixed-dim": "#ffb786",
+                    "primary-fixed-dim": "#adc6ff",
+                    "on-secondary-container": "#586377",
+                    "secondary": "#545f73",
+                    "surface-bright": "#f7f9fb",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-secondary-fixed-variant": "#3c475a",
+                    "secondary-container": "#d5e0f8",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#004395",
+                    "surface-container": "#eceef0",
+                    "inverse-surface": "#2d3133",
+                    "primary-fixed": "#d8e2ff",
+                    "inverse-primary": "#adc6ff",
+                    "tertiary-fixed": "#ffdcc6",
+                    "surface-variant": "#e0e3e5",
+                    "tertiary": "#924700",
+                    "on-background": "#191c1e"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "80px",
+                    "xs": "4px",
+                    "sm": "12px",
+                    "lg": "48px",
+                    "gutter": "24px",
+                    "base": "8px",
+                    "md": "24px",
+                    "container-max": "1280px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "h2": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "h3": ["Inter"],
+                    "h1": ["Inter"],
+                    "label-bold": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "1.4", "fontWeight": "400"}],
+                    "h2": ["32px", {"lineHeight": "1.25", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "h3": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "h1": ["48px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-bold": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 h-16 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center justify-between px-6 max-w-[1280px] mx-auto w-full h-full">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black tracking-tighter text-blue-600 dark:text-blue-400">LUXE</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 font-bold pb-1 text-sm tracking-tight" href="#">Home</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm tracking-tight transition-all duration-200" href="#">Shop</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm tracking-tight transition-all duration-200" href="#">Categories</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium text-sm tracking-tight transition-all duration-200" href="#">Sale</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-64" placeholder="Search products..." type="text"/>
+</div>
+<button class="p-2 text-slate-600 hover:bg-slate-50 rounded-full transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+</button>
+<button class="p-2 text-slate-600 hover:bg-slate-50 rounded-full transition-transform active:scale-95">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</div>
+</nav>
+<main class="pt-24 pb-xl max-w-[1280px] mx-auto px-6">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 mb-8 text-slate-500 font-body-sm">
+<a class="hover:text-primary" href="#">Home</a>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<a class="hover:text-primary" href="#">Shop</a>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-on-background font-medium">Modern Chronograph Watch</span>
+</nav>
+<!-- Product Hero Section -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-md items-start">
+<!-- Image Gallery Gallery -->
+<div class="lg:col-span-7 grid grid-cols-1 md:grid-cols-[100px_1fr] gap-4">
+<!-- Thumbnails (Desktop: Left, Mobile: Bottom via order) -->
+<div class="order-2 md:order-1 flex md:flex-col gap-4 overflow-x-auto md:overflow-visible">
+<div class="w-20 h-20 md:w-full md:h-24 flex-shrink-0 border-2 border-primary rounded-lg overflow-hidden cursor-pointer bg-white">
+<img alt="Product thumbnail" class="w-full h-full object-cover" data-alt="Close up studio shot of a sleek modern white wristwatch on a minimalist grey background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyXe0zP3hoJiERORYlPUKH4j11UwF5obbxBkOB1d0itLKkwaang7qZr8m9ECCP9ezqEJoIXBUVjBOmIYxuEHUC_DOHIfg34oKZPOcXBafQdDeQtXn8-o0qzLh6AYBQ6pkQAsGwi1c1tshuv2-Bf9ZYHpQfM-8pBBNot1IXxKxnmAzpR9wwBDI62k-mhLcORv3UqMJJdrBzqnCLQXU1WxII-wEI5XQDFIwe3wsLLpry9oVS8UfwU-AQFXjjCsZvdjWjxSRz4X7Q62WB"/>
+</div>
+<div class="w-20 h-20 md:w-full md:h-24 flex-shrink-0 border border-slate-200 rounded-lg overflow-hidden cursor-pointer hover:border-primary transition-colors bg-white">
+<img alt="Product thumbnail" class="w-full h-full object-cover" data-alt="Detailed side profile view of a minimalist camera with premium lens finish on white background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh21oTyzpqCI08JyAwBnFw75sI6JSsHRwo3lJvwGk-F4TzkzmK8HaO3t2Hpb_cB6GBN76OUltOGyKiaZpmscpJIXcSM_7vK0p48uTfrAiUa5iBL5ckb1WbaYxEsMnmUisAHN7KH9IMsIRKdCBEikGXchrIZHDPfv9-QIjl2Yxy6mAAmDsbAEZDbp5yh6pVVJ65_U9GOsyjhOkkDhxC7VUE5ccimTkB783SLIdkTfkdL6PMjyt-TtgYpqVusUt1l-iNRUiwrKjVNHJm"/>
+</div>
+<div class="w-20 h-20 md:w-full md:h-24 flex-shrink-0 border border-slate-200 rounded-lg overflow-hidden cursor-pointer hover:border-primary transition-colors bg-white">
+<img alt="Product thumbnail" class="w-full h-full object-cover" data-alt="Dynamic shot of designer sunglasses with reflective lenses on a clean studio surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWjKlcBnuW2-VAYwlsyltspU7xQLOLG1-RZIX7RhSMcqbi77Z8HsySXgtE0ZA9eJxFH0e0ASGyDiF6os12AszIBggIJuwCIrACKs1FniLVQkVcfOaNISAlVA4bWN78xp5F03OcS3200i8CYYTNGI4WQxKPceZMxRLsJb-o3gc_jBPYsVsrrkI78vXkV9z_odoyjJJzuGbg_o4zB4L1enNZ3rcp3y-FV5KHnK9XlMlRtpI4cSMQbVjxuoOC51FH0774X42mdk5m3avU"/>
+</div>
+</div>
+<!-- Main Image -->
+<div class="order-1 md:order-2 border border-slate-200 rounded-xl overflow-hidden bg-white aspect-square">
+<img alt="Primary product image" class="w-full h-full object-cover" data-alt="High-resolution primary image of a premium white watch with silver accents, professionally lit on a bright studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAo-BZO0XJBsuLgjk4bZ4Ipuo6gC2wEQh-GvcRhDz9fj1Tlo8hZONhwjI3ZNlfZfn4hHEcrE5da_paXTL_HB0wQnSxmeZoGiawlw1OfomrbWsgfOO40it-eoZqSl_T0HslnIsUGxPw1KD9qyRg8udhUV8sjMZ7I3KSO4ZP8Srmkm8UmLl2W0ZwX65k3j4OogzJNV2BjRx59ismjjY_mjAuHWOOHxspfLqLZpCbpsKfMZBVbWrZXf6HnLmmwXyxhXxJv4BIm_8W1UypD"/>
+</div>
+</div>
+<!-- Product Info -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<div>
+<h1 class="font-h1 text-h2 mb-2">Modern Chronograph Watch</h1>
+<div class="flex items-center gap-4">
+<div class="flex text-amber-400">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">star</span>
+</div>
+<span class="text-body-sm text-slate-500">(128 Reviews)</span>
+</div>
+</div>
+<div class="flex items-baseline gap-4">
+<span class="font-h2 text-primary">$299.00</span>
+<span class="font-body-md text-slate-400 line-through">$349.00</span>
+<span class="bg-red-50 text-red-600 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Save 15%</span>
+</div>
+<p class="font-body-md text-secondary">A timeless masterpiece designed for the modern individual. Featuring a surgical-grade stainless steel case and a precision quartz movement for unparalleled reliability.</p>
+<!-- Color Selection -->
+<div class="flex flex-col gap-3">
+<span class="font-label-bold text-slate-900">SELECT COLOR</span>
+<div class="flex gap-4">
+<button class="w-10 h-10 rounded-full bg-slate-100 border-2 border-primary ring-2 ring-offset-2 ring-transparent transition-all"></button>
+<button class="w-10 h-10 rounded-full bg-slate-800 border-2 border-transparent hover:border-slate-300 transition-all"></button>
+<button class="w-10 h-10 rounded-full bg-rose-200 border-2 border-transparent hover:border-slate-300 transition-all"></button>
+</div>
+</div>
+<!-- Size Selection -->
+<div class="flex flex-col gap-3">
+<div class="flex justify-between">
+<span class="font-label-bold text-slate-900">SELECT SIZE</span>
+<button class="text-primary text-xs font-semibold hover:underline">Size Guide</button>
+</div>
+<div class="flex gap-2">
+<button class="px-6 py-3 border border-slate-200 rounded-lg font-label-bold hover:border-primary hover:text-primary transition-colors uppercase">Small</button>
+<button class="px-6 py-3 border-2 border-primary text-primary rounded-lg font-label-bold uppercase">Medium</button>
+<button class="px-6 py-3 border border-slate-200 rounded-lg font-label-bold hover:border-primary hover:text-primary transition-colors uppercase">Large</button>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col sm:flex-row gap-4 mt-4">
+<button class="flex-1 bg-primary text-white font-label-bold py-5 rounded-xl uppercase tracking-widest active:scale-95 transition-transform">
+                        Add to Cart
+                    </button>
+<button class="p-5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">favorite</span>
+</button>
+</div>
+<!-- Benefits -->
+<div class="grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">local_shipping</span>
+<span class="text-body-sm text-secondary">Free Shipping</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">verified_user</span>
+<span class="text-body-sm text-secondary">2-Year Warranty</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tabs Content Section -->
+<section class="mt-xl">
+<div class="flex border-b border-slate-200 mb-8 overflow-x-auto">
+<button class="px-8 py-4 border-b-2 border-primary text-primary font-label-bold whitespace-nowrap">Product Description</button>
+<button class="px-8 py-4 border-b-2 border-transparent text-slate-500 font-label-bold hover:text-primary transition-colors whitespace-nowrap">Specifications</button>
+<button class="px-8 py-4 border-b-2 border-transparent text-slate-500 font-label-bold hover:text-primary transition-colors whitespace-nowrap">Customer Reviews (128)</button>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-xl">
+<!-- Description -->
+<div class="lg:col-span-2 space-y-6">
+<div class="prose prose-slate max-w-none">
+<h2 class="font-h3 text-h3 mb-4">Meticulously Crafted Excellence</h2>
+<p class="font-body-md text-secondary leading-relaxed">
+                            Elevate your daily routine with a timepiece that balances professional precision with effortless style. Our Modern Chronograph is more than just a watch; it's a statement of intent. The scratch-resistant sapphire crystal ensures clarity for years, while the Japanese-made movement provides accuracy within seconds per month.
+                        </p>
+<p class="font-body-md text-secondary leading-relaxed mt-4">
+                            Each component is hand-inspected at our studio to ensure the highest quality standards. The interchangeable leather strap allows you to customize your look for any occasion, from boardroom meetings to weekend adventures.
+                        </p>
+</div>
+<!-- Bento Feature Highlights -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+<div class="bg-surface-container p-6 rounded-xl border border-outline-variant">
+<span class="material-symbols-outlined text-primary mb-2">water_drop</span>
+<h4 class="font-label-bold mb-1">Water Resistant</h4>
+<p class="text-body-sm text-secondary">Atmospheric pressure testing up to 50 meters (5 ATM) for daily confidence.</p>
+</div>
+<div class="bg-surface-container p-6 rounded-xl border border-outline-variant">
+<span class="material-symbols-outlined text-primary mb-2">flare</span>
+<h4 class="font-label-bold mb-1">Night Visibility</h4>
+<p class="text-body-sm text-secondary">Luminescent hands and markers for effortless reading in low-light environments.</p>
+</div>
+</div>
+</div>
+<!-- Reviews Sidebar -->
+<div class="lg:col-span-1">
+<div class="bg-white p-6 rounded-xl border border-slate-200">
+<h3 class="font-h3 text-h3 mb-6">User Reviews</h3>
+<div class="space-y-6">
+<!-- Review Item -->
+<div class="pb-6 border-b border-slate-100 last:border-0">
+<div class="flex items-center gap-2 mb-2">
+<div class="flex text-amber-400 text-xs">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="font-label-bold text-on-background">James W.</span>
+</div>
+<p class="text-body-sm text-secondary italic">"Absolutely stunning quality. The weight feels premium and it looks much more expensive than it is."</p>
+</div>
+<!-- Review Item -->
+<div class="pb-6 border-b border-slate-100 last:border-0">
+<div class="flex items-center gap-2 mb-2">
+<div class="flex text-amber-400 text-xs">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 0;">star</span>
+</div>
+<span class="font-label-bold text-on-background">Sarah L.</span>
+</div>
+<p class="text-body-sm text-secondary italic">"Elegant design and very comfortable to wear. Perfect for everyday professional use."</p>
+</div>
+</div>
+<button class="w-full mt-6 py-3 border border-primary text-primary font-label-bold rounded-lg hover:bg-primary hover:text-white transition-all uppercase">
+                            View All Reviews
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full mt-auto bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+<div class="max-w-[1280px] mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-start gap-8">
+<div class="flex flex-col gap-4 max-w-sm">
+<span class="text-xl font-black text-slate-900 dark:text-white">LUXE</span>
+<p class="text-slate-500 font-body-sm leading-6">Providing high-end products with a minimalist focus on quality and design. Elevating your lifestyle, one item at a time.</p>
+<div class="flex gap-4 mt-2">
+<a class="text-slate-400 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">public</span></a>
+<a class="text-slate-400 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">mail</span></a>
+<a class="text-slate-400 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">share</span></a>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-12">
+<div class="flex flex-col gap-4">
+<span class="font-label-bold text-slate-900 dark:text-white uppercase tracking-widest text-xs">Customer Service</span>
+<ul class="flex flex-col gap-3">
+<li><a class="text-slate-500 hover:text-blue-600 transition-colors text-sm" href="#">Contact</a></li>
+<li><a class="text-slate-500 hover:text-blue-600 transition-colors text-sm" href="#">Shipping Info</a></li>
+<li><a class="text-slate-500 hover:text-blue-600 transition-colors text-sm" href="#">Returns</a></li>
+</ul>
+</div>
+<div class="flex flex-col gap-4">
+<span class="font-label-bold text-slate-900 dark:text-white uppercase tracking-widest text-xs">About</span>
+<ul class="flex flex-col gap-3">
+<li><a class="text-slate-500 hover:text-blue-600 transition-colors text-sm" href="#">About Us</a></li>
+<li><a class="text-slate-500 hover:text-blue-600 transition-colors text-sm" href="#">Privacy Policy</a></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="max-w-[1280px] mx-auto px-6 py-8 border-t border-slate-200 dark:border-slate-900">
+<p class="text-slate-400 text-xs text-center md:text-left">© 2024 LUXE Ecommerce. All rights reserved.</p>
+</div>
+</footer>
+</body></html>

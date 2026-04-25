@@ -1,0 +1,123 @@
+<h2>布局结构偏好</h2>
+<p class="subtitle">极简专业风格下，如何组织聊天界面的空间？</p>
+
+<div class="section">
+  <p>既然选择了极简专业风（类似 Linear、Vercel），接下来需要确定布局结构。考虑到你提到的信息密度和响应式问题，我准备了几种布局方案：</p>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="single-column" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-body" style="padding: 1rem; background: #fafafa;">
+          <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; background: white; margin-bottom: 0.5rem;">
+            <div style="font-size: 0.7em; color: #6b7280; margin-bottom: 0.3rem;">顶部导航</div>
+          </div>
+          <div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; background: white; min-height: 120px;">
+            <div style="font-size: 0.7em; color: #3b82f6; font-weight: 600;">对话区域（全宽）</div>
+            <div style="font-size: 0.65em; color: #9ca3af; margin-top: 0.3rem;">消息、工具步骤都在这里</div>
+          </div>
+          <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; background: white; margin-top: 0.5rem;">
+            <div style="font-size: 0.7em; color: #6b7280;">输入框</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>单列布局</h3>
+      <p>所有内容在一个主列中，工具步骤内联在对话流中。类似 ChatGPT 的布局。</p>
+      <div style="margin-top: 0.8rem; font-size: 0.9em;">
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 响应式最简单</div>
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 移动端体验好</div>
+        <div style="color: #dc2626;">✗ 工具步骤可能打断对话流</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="sidebar-right" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-body" style="padding: 1rem; background: #fafafa;">
+          <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; background: white; margin-bottom: 0.5rem;">
+            <div style="font-size: 0.7em; color: #6b7280;">顶部导航</div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <div style="flex: 1.5; border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; background: white; min-height: 120px;">
+              <div style="font-size: 0.7em; color: #3b82f6; font-weight: 600;">对话区域</div>
+            </div>
+            <div style="flex: 1; border: 2px solid #8b5cf6; border-radius: 8px; padding: 1rem; background: white;">
+              <div style="font-size: 0.7em; color: #8b5cf6; font-weight: 600;">工具面板</div>
+              <div style="font-size: 0.65em; color: #9ca3af; margin-top: 0.3rem;">步骤、状态</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>右侧边栏</h3>
+      <p>对话在左，工具步骤和状态信息在右侧独立面板。类似当前设计但更精简。</p>
+      <div style="margin-top: 0.8rem; font-size: 0.9em;">
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 信息分离清晰</div>
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 可以同时看对话和工具</div>
+        <div style="color: #dc2626;">✗ 小屏幕需要折叠</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="split-view" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-body" style="padding: 1rem; background: #fafafa;">
+          <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; background: white; margin-bottom: 0.5rem;">
+            <div style="font-size: 0.7em; color: #6b7280;">顶部导航 + 标签切换</div>
+          </div>
+          <div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; background: white; min-height: 120px;">
+            <div style="font-size: 0.7em; color: #3b82f6; font-weight: 600;">当前视图</div>
+            <div style="font-size: 0.65em; color: #9ca3af; margin-top: 0.3rem;">对话 | 工具 | 设置（标签切换）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>标签切换</h3>
+      <p>通过顶部标签在"对话"、"工具监控"、"设置"之间切换，每次只显示一个视图。</p>
+      <div style="margin-top: 0.8rem; font-size: 0.9em;">
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 信息密度最低</div>
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 响应式友好</div>
+        <div style="color: #dc2626;">✗ 需要切换才能看工具</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="bottom-drawer" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-body" style="padding: 1rem; background: #fafafa;">
+          <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; background: white; margin-bottom: 0.5rem;">
+            <div style="font-size: 0.7em; color: #6b7280;">顶部导航</div>
+          </div>
+          <div style="border: 2px solid #3b82f6; border-radius: 8px; padding: 1rem; background: white; min-height: 80px;">
+            <div style="font-size: 0.7em; color: #3b82f6; font-weight: 600;">对话区域（全宽）</div>
+          </div>
+          <div style="border: 2px solid #8b5cf6; border-radius: 8px; padding: 0.8rem; background: white; margin-top: 0.5rem;">
+            <div style="font-size: 0.7em; color: #8b5cf6; font-weight: 600;">工具抽屉（可展开/收起）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>底部抽屉</h3>
+      <p>对话占据主要空间，工具步骤在底部可展开的抽屉中。类似 VS Code 的终端面板。</p>
+      <div style="margin-top: 0.8rem; font-size: 0.9em;">
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 对话区域最大化</div>
+        <div style="color: #059669; margin-bottom: 0.3rem;">✓ 工具信息按需查看</div>
+        <div style="color: #dc2626;">✗ 需要额外操作展开</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+  <p class="label">提示</p>
+  <p>考虑你的使用场景：如果经常需要查看工具调用细节，选右侧边栏或底部抽屉；如果更关注对话本身，选单列或标签切换。</p>
+</div>

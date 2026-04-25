@@ -8,7 +8,7 @@ providers:
   qwen:
     model: qwen-vl-max
   deepseek:
-    model: deepseek-chat
+    model: deepseek-v4-pro
 
 # Skills 配置
 skills:
