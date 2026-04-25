@@ -1,0 +1,20 @@
+active_provider: deepseek
+
+providers:
+  kimi:
+    model: kimi-k2.5
+  qwen:
+    model: qwen-vl-max
+  deepseek:
+    model: deepseek-chat
+
+skills:
+  dir: ./skills
+  enabled: null
+
+agent:
+  max_iterations: 10
+
+webui:
+  host: 127.0.0.1
+  port: 8000

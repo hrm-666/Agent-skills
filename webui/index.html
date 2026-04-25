@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        .messages-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        .tool-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+        }
+        .tool-details.open {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .user-bubble {
+            background-color: #f3f4f6;
+            border-radius: 18px 18px 4px 18px;
+        }
+        .agent-bubble {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px 18px 18px 4px;
+        }
+        #message-input {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        #message-input:empty:before {
+            content: "输入消息...";
+            color: #9ca3af;
+        }
+        .file-tag {
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            padding: 2px 8px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .file-tag button {
+            color: #6b7280;
+            cursor: pointer;
+        }
+        .file-tag button:hover {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+    <div class="flex flex-col h-screen max-w-4xl mx-auto shadow-xl bg-white">
+        <!-- 顶部栏 -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+            <h1 class="text-xl font-semibold text-gray-800">Mini Agent</h1>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500">Model</span>
+                <select id="provider-select" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <option value="kimi">Kimi</option>
+                    <option value="qwen">Qwen</option>
+                    <option value="deepseek">DeepSeek</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 对话区域 -->
+        <div id="messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 messages-container bg-gray-50">
+            <div class="text-center text-gray-400 text-sm py-8">
+                输入消息开始对话
+            </div>
+        </div>
+
+        <!-- 底部输入区 -->
+        <div class="border-t border-gray-200 bg-white p-4">
+            <!-- 已上传文件列表 -->
+            <div id="file-list" class="flex flex-wrap gap-2 mb-2"></div>
+            
+            <div class="flex items-end gap-2">
+                <button id="upload-btn" class="flex-shrink-0 w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition" title="上传文件">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                </button>
+                <div class="flex-1 bg-gray-100 rounded-2xl px-4 py-2 min-h-[44px] max-h-[120px] overflow-y-auto" contenteditable="true" id="message-input" role="textbox" aria-multiline="true"></div>
+                <button id="send-btn" class="flex-shrink-0 px-5 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition font-medium">
+                    发送
+                </button>
+            </div>
+            <div class="text-xs text-gray-400 text-center mt-2">
+                Shift + Enter 换行，Enter 发送
+            </div>
+        </div>
+
+        <input type="file" id="file-input" multiple style="display: none;">
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // ========== 状态 ==========
+        let uploadedFiles = [];  // 存储 { name, path }
+        let currentProvider = localStorage.getItem('provider') || 'kimi';
+        
+        // ========== DOM 元素 ==========
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const uploadBtn = document.getElementById('upload-btn');
+        const fileInput = document.getElementById('file-input');
+        const providerSelect = document.getElementById('provider-select');
+        const fileListDiv = document.getElementById('file-list');
+        
+        // ========== 初始化 ==========
+        providerSelect.value = currentProvider;
+        providerSelect.addEventListener('change', () => {
+            currentProvider = providerSelect.value;
+            localStorage.setItem('provider', currentProvider);
+        });
+        
+        // ========== 更新文件列表显示 ==========
+        function updateFileListDisplay() {
+            if (uploadedFiles.length === 0) {
+                fileListDiv.innerHTML = '';
+                return;
+            }
+            
+            fileListDiv.innerHTML = uploadedFiles.map((file, idx) => `
+                <div class="file-tag">
+                    <span>📎 ${escapeHtml(file.name)}</span>
+                    <button onclick="removeFile(${idx})" title="移除">✕</button>
+                </div>
+            `).join('');
+        }
+        
+        // ========== 移除文件 ==========
+        window.removeFile = function(idx) {
+            uploadedFiles.splice(idx, 1);
+            updateFileListDisplay();
+        };
+        
+        // ========== 发送消息 ==========
+        async function sendMessage() {
+            const text = messageInput.innerText.trim();
+            if (!text && uploadedFiles.length === 0) return;
+            
+            const userText = text || (uploadedFiles.length ? '查看上传的文件' : '');
+            const imagePaths = uploadedFiles.filter(f => f.path.match(/\.(jpg|jpeg|png|gif|webp)$/i)).map(f => f.path);
+            const filePaths = uploadedFiles.map(f => f.path);
+            
+            // 显示用户消息
+            addUserMessage(userText, uploadedFiles);
+            
+            // 清空输入
+            messageInput.innerText = '';
+            uploadedFiles = [];
+            updateFileListDisplay();
+            
+            // 添加 Agent 占位
+            const agentMessageId = addAgentMessagePlaceholder();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: userText,
+                        image_paths: imagePaths,
+                        provider: currentProvider
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateAgentMessage(agentMessageId, data.reply, data.steps);
+                } else {
+                    updateAgentMessage(agentMessageId, `错误: ${data.detail || '未知错误'}`, []);
+                }
+            } catch (err) {
+                updateAgentMessage(agentMessageId, `网络错误: ${err.message}`, []);
+            }
+        }
+        
+        // ========== 添加用户消息 ==========
+        function addUserMessage(text, files) {
+            const div = document.createElement('div');
+            div.className = 'flex justify-end';
+            
+            let filesHtml = '';
+            if (files.length > 0) {
+                filesHtml = '<div class="flex flex-wrap gap-2 mb-2 justify-end">';
+                for (const f of files) {
+                    const isImage = f.path.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                    if (isImage) {
+                        filesHtml += `<img src="${f.path}" class="max-w-[100px] max-h-[100px] rounded-lg border border-gray-200 object-cover">`;
+                    } else {
+                        filesHtml += `<span class="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">📎 ${escapeHtml(f.name)}</span>`;
+                    }
+                }
+                filesHtml += '</div>';
+            }
+            
+            div.innerHTML = `
+                <div class="max-w-[80%] user-bubble px-4 py-2 shadow-sm">
+                    ${filesHtml}
+                    <div class="whitespace-pre-wrap break-words text-gray-800">${escapeHtml(text)}</div>
+                </div>
+            `;
+            messagesDiv.appendChild(div);
+            scrollToBottom();
+        }
+        
+        // ========== 添加 Agent 占位 ==========
+        function addAgentMessagePlaceholder() {
+            const id = 'msg-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex justify-start';
+            div.innerHTML = `
+                <div class="max-w-[85%] agent-bubble px-4 py-2 shadow-sm">
+                    <div class="text-gray-400 text-sm">思考中...</div>
+                </div>
+            `;
+            messagesDiv.appendChild(div);
+            scrollToBottom();
+            return id;
+        }
+        
+        // ========== 更新 Agent 消息 ==========
+        function updateAgentMessage(id, reply, steps) {
+            const container = document.getElementById(id);
+            if (!container) return;
+            
+            let toolsHtml = '';
+            if (steps && steps.length > 0) {
+                for (const step of steps) {
+                    if (step.type === 'tool_call') {
+                        const argsStr = JSON.stringify(step.args);
+                        const summary = argsStr.length > 40 ? argsStr.substring(0, 40) + '...' : argsStr;
+                        toolsHtml += `
+                            <div class="tool-call mb-2 text-sm border-l-2 border-indigo-300 pl-2">
+                                <div class="flex items-center gap-1 text-gray-600 cursor-pointer hover:text-gray-800" onclick="toggleDetails(this)">
+                                    <span>🔧</span>
+                                    <span class="font-mono text-sm">${escapeHtml(step.name)}</span>
+                                    <span class="text-gray-400 text-xs">${escapeHtml(summary)}</span>
+                                    <span class="text-xs text-gray-400">▼</span>
+                                </div>
+                                <div class="tool-details ml-6 mt-1 text-xs text-gray-500 font-mono">
+                                    <div class="mb-1">📋 参数:</div>
+                                    <pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${escapeHtml(JSON.stringify(step.args, null, 2))}</pre>
+                                    ${step.result ? `<div class="mt-1 mb-1">✅ 结果:</div><pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${escapeHtml(step.result.substring(0, 500))}</pre>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+            
+            container.innerHTML = `
+                <div class="max-w-[85%] agent-bubble px-4 py-2 shadow-sm">
+                    ${toolsHtml}
+                    <div class="prose prose-sm max-w-none text-gray-700">
+                        ${marked.parse(escapeHtml(reply))}
+                    </div>
+                </div>
+            `;
+            scrollToBottom();
+        }
+        
+        // ========== 切换工具详情 ==========
+        window.toggleDetails = function(el) {
+            const details = el.parentElement.querySelector('.tool-details');
+            if (details) {
+                details.classList.toggle('open');
+                const arrow = el.querySelector('span:last-child');
+                if (arrow) arrow.textContent = details.classList.contains('open') ? '▲' : '▼';
+            }
+        };
+        
+        // ========== 文件上传 ==========
+        async function uploadFiles(files) {
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (res.ok) {
+                        uploadedFiles.push({ name: file.name, path: data.path });
+                        updateFileListDisplay();
+                        showTempMessage(`已上传: ${file.name}`, 'success');
+                    } else {
+                        showTempMessage(`上传失败: ${file.name}`, 'error');
+                    }
+                } catch (err) {
+                    console.error('Upload failed:', err);
+                    showTempMessage(`上传失败: ${file.name}`, 'error');
+                }
+            }
+        }
+        
+        // ========== 临时提示 ==========
+        function showTempMessage(msg, type) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+        
+        // ========== 事件绑定 ==========
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async (e) => {
+            if (e.target.files.length) {
+                await uploadFiles(Array.from(e.target.files));
+                fileInput.value = '';
+            }
+        });
+        
+        sendBtn.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 拖拽上传
+        const dropZone = messageInput.parentElement;
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('ring-2', 'ring-indigo-500');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('ring-2', 'ring-indigo-500');
+        });
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('ring-2', 'ring-indigo-500');
+            if (e.dataTransfer.files.length) {
+                await uploadFiles(Array.from(e.dataTransfer.files));
+            }
+        });
+        
+        function scrollToBottom() {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        messageInput.focus();
+    </script>
+</body>
+</html>
