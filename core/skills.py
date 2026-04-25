@@ -33,21 +33,25 @@ class SkillLoader:
         - description 必填,<=1024 字符,不含尖括号
         """
         if self.skills_dir is None:
+            logger.warning("Skills directory not configured")
             return
 
         name_pattern = re.compile(r"^[a-z0-9-]+$")
 
         for skill_dir in self.skills_dir.iterdir():
             if not skill_dir.is_dir():
+                logger.warning(f"Skills directory not exist: {skill_dir}")
                 continue
 
             skill_file = skill_dir / "SKILL.md"
             if not skill_file.exists():
+                logger.warning(f"Skills file not exist: {skill_file}")
                 continue
 
             content = skill_file.read_text(encoding="utf-8")
             parts = content.split("---", 2)
             if len(parts) < 3:
+                logger.warning(f"This {skill_file} does not conform agentskills.io")
                 continue
 
             try:
@@ -59,10 +63,11 @@ class SkillLoader:
             description = frontmatter.get("description", "")
 
             if not (isinstance(name, str) and name_pattern.match(name) and len(name) <= 64):
+                logger.warning(f"The name field does not conform agentskills.io")
                 continue
 
-            if not (isinstance(description, str) and len(
-                    description) <= 1024 and "<" not in description and ">" not in description):
+            if not (isinstance(description, str) and len(description) <= 1024 and "<" not in description and ">" not in description):
+                logger.warning(f"The description field does not conform agentskills.io")
                 continue
 
             if self.enabled is not None and name not in self.enabled:
@@ -111,7 +116,6 @@ def get_skill_loader() -> SkillLoader:
     try:
         skills_dir = Path(config["skills"]["dir"])
     except KeyError:
-        logger.error("Skills directory not configured")
         skills_dir = None
     skill_loader = SkillLoader(skills_dir)
     skill_loader.scan()

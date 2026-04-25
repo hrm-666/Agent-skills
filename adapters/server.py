@@ -114,7 +114,7 @@ def upload_file(file: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         content = file.file.read()
         f.write(content)
-    return {"filename": file.filename, "path": f"/uploads/{file.filename}"}
+    return {"filename": file.filename, "path": f"./uploads/{file.filename}"}
 
 def webui_run() -> None:
     webui_cfg = config.get("webui", {})

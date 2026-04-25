@@ -1,10 +1,7 @@
-uploads
-logs
 .env
-docs
-Task6.md
 .idea
+.claude
 __pycache__/
 *.py[cod]
-.claude
 data/sample.db
+Task6.md

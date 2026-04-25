@@ -10,27 +10,25 @@
     .scrollbar-thin::-webkit-scrollbar { width: 6px; }
     .scrollbar-thin::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 3px; }
 
-    /* User bubble: soft blue with shadow */
+    /* ===== Bubble Styles ===== */
     .bubble-user {
       background: linear-gradient(135deg, #5b8def 0%, #4f73e8 100%);
       box-shadow: 0 2px 8px rgba(79, 115, 232, 0.3);
     }
 
-    /* Agent bubble: light gray with subtle shadow */
     .bubble-agent {
       background: #f8fafc;
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
       border: 1px solid #e8ecf0;
     }
 
-    /* Error bubble */
     .bubble-error {
       background: #fef2f2;
       border: 1px solid #fecaca;
       box-shadow: 0 1px 4px rgba(239, 68, 68, 0.1);
     }
 
-    /* Tool call card */
+    /* ===== Tool Card ===== */
     .tool-card {
       background: #f8fafc;
       border: 1px solid #e4e9ed;
@@ -38,16 +36,17 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
-    /* Input focus glow */
+    /* ===== Input Focus Glow ===== */
     textarea:focus {
       box-shadow: 0 0 0 3px rgba(79, 115, 232, 0.15);
     }
 
-    /* Send button */
+    /* ===== Send Button ===== */
     .btn-send {
       background: linear-gradient(135deg, #5b8def 0%, #4f73e8 100%);
       box-shadow: 0 2px 6px rgba(79, 115, 232, 0.35);
       transition: all 0.2s ease;
+      cursor: pointer;
     }
     .btn-send:hover:not(:disabled) {
       box-shadow: 0 4px 12px rgba(79, 115, 232, 0.5);
@@ -56,10 +55,15 @@
     .btn-send:active:not(:disabled) {
       transform: translateY(0);
     }
+    .btn-send:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
   </style>
 </head>
 <body class="bg-[#f8fafc] text-gray-800 flex flex-col h-screen">
-  <!-- Top Bar -->
+
+  <!-- ===== Top Bar ===== -->
   <header class="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-white">
     <h1 class="text-lg font-semibold text-gray-700">Mini Agent</h1>
     <div class="flex items-center gap-2">
@@ -69,104 +73,232 @@
     </div>
   </header>
 
-  <!-- Chat Area -->
+  <!-- ===== Chat Area ===== -->
   <main id="chatArea" class="flex-1 overflow-y-auto px-6 py-6 space-y-5 scrollbar-thin">
-    <div class="text-center text-gray-400 text-sm py-12">开始对话吧</div>
+    <div id="emptyHint" class="text-center text-gray-400 text-sm py-12">开始对话吧</div>
   </main>
 
-  <!-- Input Area -->
+  <!-- ===== Input Area ===== -->
   <footer class="border-t border-gray-200 px-5 py-4 bg-white">
+    <!-- Pending files preview (shown only when files are queued) -->
+    <div id="filePreview" class="hidden flex flex-wrap gap-2 mb-3 p-3 bg-gray-50 rounded-xl border border-gray-200 min-h-[80px]"></div>
+
     <div class="flex items-end gap-3">
+      <!-- Upload button -->
       <button id="uploadBtn" class="text-gray-400 hover:text-gray-600 p-2.5 flex-shrink-0 rounded-lg hover:bg-gray-100 transition-colors" title="上传文件">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
         </svg>
       </button>
       <input type="file" id="fileInput" class="hidden" multiple>
+
+      <!-- Message input -->
       <textarea id="messageInput" rows="1" placeholder="输入内容..."
         class="flex-1 resize-none border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50 focus:outline-none focus:border-indigo-300"></textarea>
+
+      <!-- Send button -->
       <button id="sendBtn" class="btn-send text-white px-5 py-2.5 rounded-xl text-sm font-medium flex-shrink-0">发送</button>
     </div>
   </footer>
 
   <script>
-    const API_BASE = '';
-    const chatArea = document.getElementById('chatArea');
+    // ============================================================
+    // DOM References
+    // ============================================================
+    const chatArea    = document.getElementById('chatArea');
+    const emptyHint  = document.getElementById('emptyHint');
     const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
+    const sendBtn    = document.getElementById('sendBtn');
     const modelSelect = document.getElementById('modelSelect');
-    const fileInput = document.getElementById('fileInput');
-    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput  = document.getElementById('fileInput');
+    const uploadBtn  = document.getElementById('uploadBtn');
+    const filePreview = document.getElementById('filePreview');
 
-    let uploadedFiles = [];
+    const API_BASE = '';
+
+    // ============================================================
+    // State
+    // ============================================================
+    /** @type {Array<{file: File, path: string|null}>} */
+    let pendingFiles = [];
     let isLoading = false;
 
-    async function loadProviders() {
-      try {
-        const res = await fetch(`${API_BASE}/api/providers`);
-        const providers = await res.json();
-        modelSelect.innerHTML = '';
-        providers.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.name;
-          opt.textContent = p.name.charAt(0).toUpperCase() + p.name.slice(1);
-          if (p.active) opt.selected = true;
-          modelSelect.appendChild(opt);
-        });
-        const saved = localStorage.getItem('mini-agent-model');
-        if (saved && providers.some(p => p.name === saved)) {
-          modelSelect.value = saved;
+    // ============================================================
+    // ------ File Preview ------
+    // ============================================================
+
+    /**
+     * Render pending files as thumbnail cards.
+     * Each card shows an image preview (or 📄 icon for non-images)
+     * and a × button to remove the file from the queue.
+     */
+    function renderFilePreview() {
+      // Toggle visibility
+      if (pendingFiles.length === 0) {
+        filePreview.classList.add('hidden');
+        filePreview.innerHTML = '';
+        return;
+      }
+
+      filePreview.classList.remove('hidden');
+      filePreview.innerHTML = '';
+
+      pendingFiles.forEach((item, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative';
+
+        // Thumbnail
+        if (isImageFile(item.file.name)) {
+          const img = document.createElement('img');
+          img.src = item.path
+            ? (item.path.startsWith('/') ? `${API_BASE}${item.path}` : item.path)
+            : URL.createObjectURL(item.file);
+          img.className = 'w-16 h-16 object-cover rounded-xl border border-gray-200';
+          img.alt = item.file.name;
+          img.onerror = () => { img.style.display = 'none'; };
+          wrapper.appendChild(img);
+        } else {
+          const icon = document.createElement('div');
+          icon.className = 'w-16 h-16 flex items-center justify-center bg-gray-100 rounded-xl border border-gray-200 text-2xl';
+          icon.textContent = '📄';
+          wrapper.appendChild(icon);
         }
+
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'absolute -top-2 -right-2 w-5 h-5 bg-gray-800 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors';
+        removeBtn.textContent = '×';
+        removeBtn.title = '删除';
+        removeBtn.onclick = (e) => {
+          e.stopPropagation();
+          removePendingFile(index);
+        };
+        wrapper.appendChild(removeBtn);
+
+        filePreview.appendChild(wrapper);
+      });
+    }
+
+    /**
+     * Remove a file from pending queue by index.
+     * @param {number} index
+     */
+    function removePendingFile(index) {
+      pendingFiles.splice(index, 1);
+      renderFilePreview();
+    }
+
+    /**
+     * Check if a filename is a supported image format.
+     * @param {string} name
+     * @returns {boolean}
+     */
+    function isImageFile(name) {
+      return /\.(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/i.test(name);
+    }
+
+    // ============================================================
+    // ------ Message Sending ------
+    // ============================================================
+
+    /**
+     * Upload all pending files to the server.
+     * Returns array of uploaded file paths.
+     * @returns {Promise<string[]>}
+     */
+    async function uploadPendingFiles() {
+      const paths = [];
+      for (const item of pendingFiles) {
+        const formData = new FormData();
+        formData.append('file', item.file);
+        try {
+          const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: formData });
+          const data = await res.json();
+          paths.push(data.path);
+        } catch (err) {
+          console.error('Upload failed:', err);
+        }
+      }
+      return paths;
+    }
+
+    /**
+     * Send message to the agent with optional image paths.
+     * @param {string} text
+     * @param {string[]} [imagePaths]
+     */
+    async function sendMessage(text, imagePaths) {
+      try {
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, image_paths: imagePaths || null, provider: modelSelect.value })
+        });
+        const data = await res.json();
+
+        if (data.steps?.length) {
+          data.steps.forEach(step => addToolStep(step));
+        }
+        addMessage('agent', data.reply || '无响应');
       } catch (err) {
-        console.error('Failed to load providers:', err);
+        addMessage('agent', `错误: ${err.message}`, null, true);
       }
     }
 
-    async function sendMessage() {
+    /**
+     * Main send handler: validates input, uploads files, clears state.
+     */
+    async function handleSend() {
       const text = messageInput.value.trim();
-      if (!text && uploadedFiles.length === 0) return;
+      if (!text && pendingFiles.length === 0) return;
       if (isLoading) return;
+
+      // Guard: hide empty hint
+      if (emptyHint) emptyHint.style.display = 'none';
 
       isLoading = true;
       sendBtn.disabled = true;
       sendBtn.textContent = '...';
 
-      addMessage('user', text, uploadedFiles.map(f => f.name));
+      // Show user message immediately
+      addMessage('user', text, pendingFiles.map(item => item.file.name));
+
+      const textToSend = text;
+      const fileNamesToShow = pendingFiles.map(item => item.file.name);
+
+      // Clear input immediately
       messageInput.value = '';
 
-      const imagePaths = uploadedFiles.map(f => f.path);
+      // Upload files now (on send), not on select
+      const imagePaths = await uploadPendingFiles();
 
-      try {
-        const res = await fetch(`${API_BASE}/api/chat`, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            text,
-            image_paths: imagePaths.length ? imagePaths : null,
-            provider: modelSelect.value
-          })
-        });
-        const data = await res.json();
-
-        if (data.steps && data.steps.length) {
-          data.steps.forEach(step => addToolStep(step));
-        }
-
-        addMessage('agent', data.reply || '无响应');
-      } catch (err) {
-        addMessage('agent', `错误: ${err.message}`, null, true);
-      }
-
-      uploadedFiles = [];
+      // Clear pending files and preview UI
+      pendingFiles = [];
       fileInput.value = '';
+      renderFilePreview();
+
+      // Send to agent
+      await sendMessage(textToSend, imagePaths);
+
       isLoading = false;
       sendBtn.disabled = false;
       sendBtn.textContent = '发送';
     }
 
-    function addMessage(role, content, fileNames = null, isError = false) {
-      const div = document.createElement('div');
-      div.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
+    // ============================================================
+    // ------ Chat UI ------
+    // ============================================================
+
+    /**
+     * Add a message bubble to the chat area.
+     * @param {'user'|'agent'} role
+     * @param {string} content
+     * @param {string[]} [fileNames]
+     * @param {boolean} [isError]
+     */
+    function addMessage(role, content, fileNames, isError = false) {
+      const container = document.createElement('div');
+      container.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
 
       const bubble = document.createElement('div');
       if (role === 'user') {
@@ -180,61 +312,54 @@
       const contentDiv = document.createElement('div');
       contentDiv.className = 'whitespace-pre-wrap';
       contentDiv.textContent = content;
-
       bubble.appendChild(contentDiv);
 
-      if (fileNames && fileNames.length) {
-        fileNames.forEach(n => {
-          const f = document.createElement('div');
-          f.className = 'text-xs opacity-75 mt-1';
-          f.textContent = '📎 ' + n;
-          bubble.appendChild(f);
+      if (fileNames?.length) {
+        fileNames.forEach(name => {
+          const label = document.createElement('div');
+          label.className = 'text-xs opacity-75 mt-1';
+          label.textContent = '📎 ' + name;
+          bubble.appendChild(label);
         });
       }
 
-      div.appendChild(bubble);
-      chatArea.appendChild(div);
+      container.appendChild(bubble);
+      chatArea.appendChild(container);
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
+    /**
+     * Add a tool-call step card to the chat area.
+     * @param {{name: string, arguments: string, result?: string}} step
+     */
     function addToolStep(step) {
-      const div = document.createElement('div');
-      div.className = 'flex justify-start';
+      const container = document.createElement('div');
+      container.className = 'flex justify-start';
 
       const inner = document.createElement('div');
       inner.className = 'tool-card text-sm font-mono rounded-lg px-4 py-2.5 max-w-2xl';
       inner.style.cursor = 'pointer';
+      inner.title = '点击展开结果';
 
-      const icon = document.createElement('span');
-      icon.className = 'text-indigo-500 mr-1';
-      icon.textContent = '🔧';
+      inner.innerHTML = `
+        <span class="text-indigo-500 mr-1">🔧</span>
+        <span class="text-gray-700">${step.name} </span>
+        <span class="text-gray-400">${step.arguments}</span>
+      `;
 
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'text-gray-700';
-      nameSpan.textContent = step.name + ' ';
-
-      const argsSpan = document.createElement('span');
-      argsSpan.className = 'text-gray-400';
-      argsSpan.textContent = step.arguments;
-
-      inner.appendChild(icon);
-      inner.appendChild(nameSpan);
-      inner.appendChild(argsSpan);
-
-      div.appendChild(inner);
-      chatArea.appendChild(div);
+      container.appendChild(inner);
+      chatArea.appendChild(container);
 
       if (step.result) {
-        inner.title = 'Click to expand result';
         inner.addEventListener('click', () => {
-          const existing = div.querySelector('.tool-result');
+          const existing = container.querySelector('.tool-result');
           if (existing) {
             existing.remove();
           } else {
             const resultDiv = document.createElement('div');
             resultDiv.className = 'tool-result text-xs text-gray-600 bg-gray-100 rounded px-3 py-2 mt-1 whitespace-pre-wrap break-all';
             resultDiv.textContent = step.result;
-            div.appendChild(resultDiv);
+            container.appendChild(resultDiv);
           }
         });
       }
@@ -242,34 +367,50 @@
       chatArea.scrollTop = chatArea.scrollHeight;
     }
 
+    // ============================================================
+    // ------ Provider Loading ------
+    // ============================================================
+
+    async function loadProviders() {
+      try {
+        const res = await fetch(`${API_BASE}/api/providers`);
+        const providers = await res.json();
+        modelSelect.innerHTML = '';
+
+        providers.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.name;
+          opt.textContent = p.name.charAt(0).toUpperCase() + p.name.slice(1);
+          if (p.active) opt.selected = true;
+          modelSelect.appendChild(opt);
+        });
+
+        const saved = localStorage.getItem('mini-agent-model');
+        if (saved && providers.some(p => p.name === saved)) {
+          modelSelect.value = saved;
+        }
+      } catch (err) {
+        console.error('Failed to load providers:', err);
+      }
+    }
+
+    // ============================================================
+    // ------ Event Bindings ------
+    // ============================================================
+
+    // Upload button → trigger file input
     uploadBtn.addEventListener('click', () => fileInput.click());
 
-    fileInput.addEventListener('change', async () => {
+    // File selected → add to pending queue (NO upload yet)
+    fileInput.addEventListener('change', () => {
       for (const file of fileInput.files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-          const res = await fetch(`${API_BASE}/api/upload`, {method: 'POST', body: formData});
-          const data = await res.json();
-          uploadedFiles.push({path: data.path, name: file.name});
-        } catch (err) {
-          console.error('Upload failed:', err);
-        }
+        pendingFiles.push({ file, path: null });
       }
       fileInput.value = '';
+      renderFilePreview();
     });
 
-    messageInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-
-    modelSelect.addEventListener('change', () => {
-      localStorage.setItem('mini-agent-model', modelSelect.value);
-    });
-
+    // Drag & drop → add to pending queue (NO upload yet)
     chatArea.addEventListener('dragover', e => {
       e.preventDefault();
       chatArea.classList.add('bg-gray-50');
@@ -282,20 +423,34 @@
     chatArea.addEventListener('drop', async e => {
       e.preventDefault();
       chatArea.classList.remove('bg-gray-50');
-      const files = e.dataTransfer.files;
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-          const res = await fetch(`${API_BASE}/api/upload`, {method: 'POST', body: formData});
-          const data = await res.json();
-          uploadedFiles.push({path: data.path, name: file.name});
-        } catch (err) {
-          console.error('Upload failed:', err);
-        }
+
+      for (const file of e.dataTransfer.files) {
+        // For drag-drop, we still defer upload to send time.
+        // Store File object with null path; path will be populated on send.
+        pendingFiles.push({ file, path: null });
+      }
+      renderFilePreview();
+    });
+
+    // Send button
+    sendBtn.addEventListener('click', handleSend);
+
+    // Enter key (without Shift)
+    messageInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
       }
     });
 
+    // Model selector → persist choice
+    modelSelect.addEventListener('change', () => {
+      localStorage.setItem('mini-agent-model', modelSelect.value);
+    });
+
+    // ============================================================
+    // ------ Init ------
+    // ============================================================
     loadProviders();
   </script>
 </body>

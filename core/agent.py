@@ -5,6 +5,7 @@ from typing import Optional, Callable
 from core.llm import LLM
 from core.skills import SkillLoader
 from core.tools import ToolRegistry
+from core.utils import get_image_data_url
 
 logger = logging.getLogger(__name__)
 
@@ -44,22 +45,29 @@ class Agent:
         """
         system_prompt = self._build_system_prompt()
 
-        if image_paths:
-            image_type = "image_url" if self.llm.supports_vision else "text"
-            content = [
-                {"type": "text", "text": user_text},
-                *[
-                    {"type": image_type, "image_url": {"url": path}}
-                    for path in image_paths
-                ]
-            ]
-        else:
-            content = user_text
-
         messages: list[dict] = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": content}
+            {"role": "user", "content": user_text}
         ]
+
+        if image_paths:
+            if self.llm.supports_vision:
+                for image_path in image_paths:
+                    messages.append({
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"{get_image_data_url(image_path)}"},
+                            }
+                        ]
+                    })
+            else:
+                for image_path in image_paths:
+                    messages.append({
+                        "role": "user",
+                        "content": f"url: {image_path}"
+                    })
 
         tools = self.tool_registry.get_openai_schemas()
 
@@ -114,31 +122,12 @@ class Agent:
             if response.content is not None:
                 logger.info(f"Agent.run completed: response_length={len(response.content)}")
                 return response.content
+            if iteration == self.max_iterations - 1:
+                logger.warning("Agent exceeded max iterations")
+                return f"任务未能在 15 轮内完成,已中止。最后的进展是:{response}"
 
-        logger.warning("Agent exceeded max iterations")
-        return "Error: Exceeded maximum iterations. Please try again."
 
     def _build_system_prompt(self) -> str:
-        """
-        核心 system prompt 结构:
-        ----
-        You are a task execution agent that uses tools and skills to help users.
-
-        You have 4 built-in tools: read, write, bash, activate_skill.
-
-        IMPORTANT: Before executing any specialized task, check if there's a
-        relevant skill in the catalog below. If yes, use activate_skill(name)
-        to load its full instructions. Don't guess — skills contain the exact
-        commands and schemas you need.
-
-        {skill_catalog}
-
-        Rules:
-        - Always use activate_skill BEFORE bash-ing into a skill's scripts
-        - After activating a skill, follow its SKILL.md instructions exactly
-        - Keep responses concise unless user asks for detail
-        ----
-        """
         skill_catalog = self.skill_loader.get_catalog_text()
         return f"""You are a task execution agent that uses tools and skills to help users.
 

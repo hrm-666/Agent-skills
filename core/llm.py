@@ -62,7 +62,7 @@ class LLM:
         """
         all_messages = [{"role": "system", "content": system}] + messages
 
-        logger.info(f"LLM complete called: provider={self.provider}, model={self.model}, message_count={len(messages)}")
+        logger.info(f"LLM complete called: provider={self.provider}, model={self.model}")
 
         response = self.client.chat.completions.create(
             model=self.model,

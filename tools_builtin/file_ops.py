@@ -1,6 +1,6 @@
 import logging
-from typing import Callable
 from pathlib import Path
+from typing import Callable
 
 MAX_READ_CHARS = 10_000
 
@@ -35,16 +35,14 @@ def read_tool() -> tuple[dict, Callable]:
         logger.info(f"read tool called with path={path}")
         file_path = Path(path)
 
-
         if not file_path.exists():
             return f"Error: File not found: {path}"
 
         try:
             # 二进制检测
-            with open(file_path, "rb") as f:
+            with open(file_path, "rb"):
                 pass
-            # 如果走到这里说明不是纯二进制，但可能仍是混合编码
-            # 再尝试文本方式打开
+            # 如果走到这里说明不是纯二进制
         except PermissionError:
             return f"Error: Permission denied: {path}"
         except IsADirectoryError:
@@ -53,6 +51,7 @@ def read_tool() -> tuple[dict, Callable]:
             return f"Error: failed to read file: {e}"
 
         try:
+            # 再尝试文本方式打开
             text = file_path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             return f"Error: Binary file cannot be read as text: {path}"

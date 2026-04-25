@@ -141,7 +141,6 @@ logging:
 
 1. 在 `skills/` 下创建子目录
 2. 编写 `SKILL.md`，包含 frontmatter 和技能说明
-
 ```markdown
 ---
 name: my-skill

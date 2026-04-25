@@ -3,8 +3,8 @@ from typing import Callable
 
 from core.skills import get_skill_loader
 from tools_builtin.shell import bash_tool
-from tools_builtin.file_ops import read_tool,write_tool
 from tools_builtin.skill_ops import activate_skill_tool
+from tools_builtin.file_ops import read_tool, write_tool
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,6 @@ class ToolRegistry:
         """注册一个工具"""
         tool_name = schema["function"]["name"]
         self.tools[tool_name] = {"schema": schema, "handler": handler}
-        logger.info(f"register tool : {tool_name}")
 
     def get_openai_schemas(self) -> list[dict]:
         """返回 OpenAI function calling 格式的 tools 列表"""
