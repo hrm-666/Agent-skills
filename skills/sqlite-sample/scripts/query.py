@@ -1,6 +1,6 @@
 """
-SQLite query script for sqlite-sample skill.
-Usage: python query.py --sql "SELECT ..."
+SQLite 示例技能查询脚本
+使用方法: python query.py --sql "SELECT ..."
 """
 
 import argparse
@@ -9,16 +9,16 @@ import sqlite3
 import sys
 from pathlib import Path
 
-# Database path relative to project root
+# 数据库路径（相对于项目根目录）
 DB_PATH = Path(__file__).parent.parent.parent.parent / "data" / "sample.db"
 
 
 def validate_sql(sql: str) -> bool:
-    """Check if SQL is a SELECT statement (security)"""
+    """检查 SQL 是否为 SELECT 语句（安全校验）"""
     sql_lower = sql.strip().lower()
     if not sql_lower.startswith("select"):
         return False
-    # Block dangerous patterns
+    # 拦截危险模式
     dangerous = [";drop", ";insert", ";update", ";delete", "--", "/*"]
     for pattern in dangerous:
         if pattern in sql_lower:
@@ -27,9 +27,9 @@ def validate_sql(sql: str) -> bool:
 
 
 def execute_query(sql: str, limit: int = 100) -> dict:
-    """Execute SQL query and return results as dict"""
+    """执行 SQL 查询，返回结果字典"""
     
-    # Auto-add LIMIT if not present
+    # 如果没有 LIMIT，自动添加
     if "limit" not in sql.lower():
         sql = f"{sql.rstrip(';')} LIMIT {limit}"
     
@@ -52,27 +52,3 @@ def execute_query(sql: str, limit: int = 100) -> dict:
             "success": False,
             "error": str(e)
         }
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Query SQLite sample database")
-    parser.add_argument("--sql", "-s", required=True, help="SELECT SQL statement")
-    parser.add_argument("--limit", "-l", type=int, default=100, help="Max rows (default: 100)")
-    
-    args = parser.parse_args()
-    
-    if not validate_sql(args.sql):
-        print(json.dumps({
-            "success": False,
-            "error": "Only SELECT statements are allowed"
-        }))
-        sys.exit(1)
-    
-    result = execute_query(args.sql, args.limit)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    
-    sys.exit(0 if result["success"] else 1)
-
-
-if __name__ == "__main__":
-    main()

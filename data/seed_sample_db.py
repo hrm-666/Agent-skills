@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Seed the sample SQLite database with employee data.
-Run this script to create data/sample.db.
+初始化示例 SQLite 数据库，填充员工数据。
+运行此脚本创建 data/sample.db 数据库。
 """
 
 import sqlite3
@@ -12,7 +12,7 @@ DB_PATH = Path(__file__).parent / "sample.db"
 
 
 def get_sample_employees():
-    """Return list of sample employee records"""
+    """返回示例员工数据列表"""
     return [
         ("张三", "技术部", 120000, "2020-03-15"),
         ("李四", "技术部", 95000, "2021-06-01"),
@@ -28,19 +28,19 @@ def get_sample_employees():
 
 
 def create_database():
-    """Create database and insert sample data"""
+    """创建数据库并插入示例数据"""
     
-    # Ensure data directory exists
+    # 确保 data 目录存在
     DB_PATH.parent.mkdir(exist_ok=True)
     
-    # Remove existing database
+    # 删除已存在的数据库
     if DB_PATH.exists():
         DB_PATH.unlink()
     
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
     
-    # Create table
+    # 创建表
     cursor.execute("""
         CREATE TABLE employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +51,7 @@ def create_database():
         )
     """)
     
-    # Insert sample data
+    # 插入示例数据
     employees = get_sample_employees()
     cursor.executemany("""
         INSERT INTO employees (name, department, salary, hire_date)
@@ -60,20 +60,20 @@ def create_database():
     
     conn.commit()
     
-    # Verify
+    # 验证数据条数
     cursor.execute("SELECT COUNT(*) FROM employees")
     count = cursor.fetchone()[0]
     
     conn.close()
     
-    print(f"    Database created: {DB_PATH}")
-    print(f"   Table: employees ({count} rows)")
+    print(f"    数据库已创建: {DB_PATH}")
+    print(f"    employees 表已创建，共 {count} 条记录")
     
-    # Show sample
+    # 显示薪资最高的 3 位员工
     conn = sqlite3.connect(str(DB_PATH))
     cursor = conn.cursor()
     cursor.execute("SELECT name, salary, department FROM employees ORDER BY salary DESC LIMIT 3")
-    print("\n   Top 3 highest paid employees:")
+    print("\n   薪资最高的 3 位员工:")
     for row in cursor.fetchall():
         print(f"   - {row[0]}: ${row[1]} ({row[2]})")
     conn.close()
