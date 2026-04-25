@@ -253,11 +253,19 @@ def run_webui_server(
 
 def _sanitize_filename(filename: str) -> str:
     """将上传文件名清洗为安全格式。"""
-    raw_name = Path(filename).name
-    normalized = FILENAME_SAFE_PATTERN.sub("_", raw_name).strip("._")
-    if not normalized:
-        return "upload"
-    return normalized[:120]
+    raw_path = Path(filename).name
+    raw_suffix = Path(raw_path).suffix
+    raw_stem = raw_path[: -len(raw_suffix)] if raw_suffix else raw_path
+
+    safe_stem = FILENAME_SAFE_PATTERN.sub("_", raw_stem).strip("._")
+    if not safe_stem:
+        safe_stem = "upload"
+
+    safe_suffix = ""
+    if raw_suffix and re.fullmatch(r"\.[A-Za-z0-9]{1,20}", raw_suffix):
+        safe_suffix = raw_suffix.lower()
+
+    return f"{safe_stem[:100]}{safe_suffix}"
 
 
 def _make_unique_filename(upload_dir: Path, original_name: str) -> str:

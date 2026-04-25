@@ -13,7 +13,7 @@
 
 - 4 个内置工具：`read / write / bash / activate_skill`
 - 3 个 provider：`kimi / qwen / deepseek`
-- 2 个示例 skill：`hello-world / sqlite-sample`
+- 3 个示例 skill：`hello-world / sqlite-sample / excel-table`
 - `CLI` 单次执行与交互式 `REPL`
 - `WebUI` 文本对话、图片上传、provider 切换、工具步骤展示
 
@@ -339,6 +339,20 @@ description: Do something specific and say when to use it.
 - 查询高薪员工
 - 按部门统计平均工资
 - 查找某个员工信息
+
+### `excel-table`
+
+用于查询上传的 Excel 表格。适合测试：
+
+- 找出表格里月薪最高的员工
+- 按指定列排序取前几名
+- 查看 Excel 工作表列名
+
+示例：
+
+```powershell
+python skills/excel-table/scripts/query.py --file "uploads/xlsx-e2337157c59f" --top-by "月薪" --limit 3
+```
 
 ## 日志与运行产物
 
