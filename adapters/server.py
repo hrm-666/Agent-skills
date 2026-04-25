@@ -4,13 +4,13 @@ FastAPI 服务器 - WebUI 后端
 import os
 import logging
 import shutil
+import asyncio
 from pathlib import Path
 from typing import Optional, List
 from datetime import datetime
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from rich.console import Console
 
@@ -69,13 +69,29 @@ class ProviderInfo(BaseModel):
     configured: bool
 
 
+# ========== 辅助函数：同步转异步 ==========
+async def run_agent_async(llm, skill_loader, max_iterations, user_text, image_paths, on_step):
+    """在 executor 中运行同步的 agent.run()，避免阻塞事件循环"""
+    loop = asyncio.get_event_loop()
+    
+    def _run():
+        tool_registry = ToolRegistry()
+        agent = Agent(llm, skill_loader, tool_registry, max_iterations)
+        return agent.run(user_text, image_paths, on_step)
+    
+    return await loop.run_in_executor(None, _run)
+
+
 # ========== API 端点 ==========
 @app.get("/")
 async def root():
     """返回 WebUI 页面"""
     html_path = Path(__file__).parent.parent / "webui" / "index.html"
     if html_path.exists():
-        return HTMLResponse(content=html_path.read_text(encoding='utf-8'))
+        # 异步读取文件
+        loop = asyncio.get_event_loop()
+        content = await loop.run_in_executor(None, html_path.read_text, encoding='utf-8')
+        return HTMLResponse(content=content)
     raise HTTPException(status_code=404, detail="WebUI not found")
 
 
@@ -100,7 +116,7 @@ async def get_providers():
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """上传文件（图片等）"""
+    """上传文件（图片等）- 异步版本"""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename")
     
@@ -109,28 +125,26 @@ async def upload_file(file: UploadFile = File(...)):
     safe_name = f"{timestamp}_{file.filename}"
     file_path = UPLOAD_DIR / safe_name
     
-    # 保存文件
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    # 异步保存文件
+    content = await file.read()  # 异步读取上传内容
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, file_path.write_bytes, content)
     
-    # 返回可访问的路径
     return {"path": f"/uploads/{safe_name}"}
 
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    """处理对话请求"""
+    """处理对话请求 - 异步版本"""
     global _llm, _skill_loader, _max_iterations
     
     if _llm is None:
         raise HTTPException(status_code=500, detail="LLM not initialized")
     
-    tool_registry = ToolRegistry()
-    agent = Agent(_llm, _skill_loader, tool_registry, _max_iterations)
-    
     steps: List[ToolStep] = []
     
     def on_step(step):
+        """回调函数（同步，由 Agent 调用）"""
         if step["type"] == "tool_call":
             steps.append(ToolStep(
                 type="tool_call",
@@ -138,19 +152,17 @@ async def chat(request: ChatRequest):
                 args=step["args"]
             ))
         elif step["type"] == "tool_result":
-            # 找到最后一个 tool_call 并添加结果
             for s in reversed(steps):
                 if s.type == "tool_call" and s.result is None:
                     s.result = step["result"][:500]
                     break
-        elif step["type"] == "thinking":
-            pass  # 忽略思考步骤
+        # thinking 步骤忽略
     
     try:
-        answer = agent.run(
-            user_text=request.text,
-            image_paths=request.image_paths,
-            on_step=on_step
+        # 异步执行 Agent（避免阻塞事件循环）
+        answer = await run_agent_async(
+            _llm, _skill_loader, _max_iterations,
+            request.text, request.image_paths, on_step
         )
         return ChatResponse(reply=answer, steps=steps)
     except Exception as e:
