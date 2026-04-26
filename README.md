@@ -158,4 +158,3 @@ MIT License
 
 - [agentskills.io](https://agentskills.io) - Skill 规范标准
 - [OpenAI](https://openai.com) - 兼容的 LLM API
-```

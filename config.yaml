@@ -13,7 +13,7 @@ skills:
   enabled: null
 
 agent:
-  max_iterations: 10
+  max_iterations: 30
 
 webui:
   host: 127.0.0.1

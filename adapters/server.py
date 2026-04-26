@@ -4,7 +4,6 @@ FastAPI 服务器 - WebUI 后端
 import os
 import logging
 import shutil
-import asyncio
 from pathlib import Path
 from typing import Optional, List
 from datetime import datetime
@@ -22,7 +21,6 @@ from core.agent import Agent
 console = Console()
 logger = logging.getLogger(__name__)
 
-# 全局变量（由 main.py 初始化）
 _llm: Optional[LLM] = None
 _skill_loader: Optional[SkillLoader] = None
 _max_iterations: int = 15
@@ -36,18 +34,16 @@ def init(llm: LLM, skill_loader: SkillLoader, max_iterations: int):
     _max_iterations = max_iterations
 
 
-# 创建 FastAPI 应用
 app = FastAPI(title="Mini Agent", description="遵循 agentskills.io 标准的智能体")
 
-# 确保上传目录存在
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 
-# ========== 请求/响应模型 ==========
 class ChatRequest(BaseModel):
     text: str
     image_paths: Optional[List[str]] = None
+    file_paths: Optional[List[str]] = None
     provider: Optional[str] = None
 
 
@@ -69,34 +65,17 @@ class ProviderInfo(BaseModel):
     configured: bool
 
 
-# ========== 辅助函数：同步转异步 ==========
-async def run_agent_async(llm, skill_loader, max_iterations, user_text, image_paths, on_step):
-    """在 executor 中运行同步的 agent.run()，避免阻塞事件循环"""
-    loop = asyncio.get_event_loop()
-    
-    def _run():
-        tool_registry = ToolRegistry()
-        agent = Agent(llm, skill_loader, tool_registry, max_iterations)
-        return agent.run(user_text, image_paths, on_step)
-    
-    return await loop.run_in_executor(None, _run)
-
-
-# ========== API 端点 ==========
 @app.get("/")
-async def root():
+def root():
     """返回 WebUI 页面"""
     html_path = Path(__file__).parent.parent / "webui" / "index.html"
     if html_path.exists():
-        # 异步读取文件
-        loop = asyncio.get_event_loop()
-        content = await loop.run_in_executor(None, html_path.read_text, encoding='utf-8')
-        return HTMLResponse(content=content)
+        return HTMLResponse(content=html_path.read_text(encoding='utf-8'))
     raise HTTPException(status_code=404, detail="WebUI not found")
 
 
 @app.get("/api/providers")
-async def get_providers():
+def get_providers():
     """获取可用的 Provider 列表"""
     env_key_map = {
         "kimi": "MOONSHOT_API_KEY",
@@ -115,27 +94,30 @@ async def get_providers():
 
 
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
-    """上传文件（图片等）- 异步版本"""
+def upload_file(file: UploadFile = File(...)):
+    """上传文件，返回可访问的 URL 和本地路径"""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename")
     
-    # 生成唯一文件名
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name = f"{timestamp}_{file.filename}"
     file_path = UPLOAD_DIR / safe_name
     
-    # 异步保存文件
-    content = await file.read()  # 异步读取上传内容
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, file_path.write_bytes, content)
+    # 同步保存文件
+    with open(file_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
     
-    return {"path": f"/uploads/{safe_name}"}
+    return {
+        "path": str(file_path),
+        "url": f"/uploads/{safe_name}",
+        "name": file.filename,
+        "size": file_path.stat().st_size
+    }
 
 
 @app.post("/api/chat")
-async def chat(request: ChatRequest):
-    """处理对话请求 - 异步版本"""
+def chat(request: ChatRequest):
+    """处理对话请求"""
     global _llm, _skill_loader, _max_iterations
     
     if _llm is None:
@@ -143,8 +125,23 @@ async def chat(request: ChatRequest):
     
     steps: List[ToolStep] = []
     
+    # 构建用户消息（包含文件信息）
+    user_text = request.text
+    
+    # 如果有上传的文件，添加文件上下文
+    if request.file_paths:
+        file_context = "\n\n[已上传的文件]\n"
+        for file_url in request.file_paths:
+            file_name = file_url.split("/")[-1]
+            is_image = file_url.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp'))
+            if is_image:
+                file_context += f"- 图片: {file_url} (可通过视觉能力分析)\n"
+            else:
+                file_context += f"- 文件: {file_url} (可通过 read 工具读取，或用 bash 工具处理)\n"
+        file_context += "\n你可以使用 read、bash 或 视觉能力 来处理这些文件。"
+        user_text = request.text + file_context
+    
     def on_step(step):
-        """回调函数（同步，由 Agent 调用）"""
         if step["type"] == "tool_call":
             steps.append(ToolStep(
                 type="tool_call",
@@ -156,23 +153,19 @@ async def chat(request: ChatRequest):
                 if s.type == "tool_call" and s.result is None:
                     s.result = step["result"][:500]
                     break
-        # thinking 步骤忽略
     
     try:
-        # 异步执行 Agent（避免阻塞事件循环）
-        answer = await run_agent_async(
-            _llm, _skill_loader, _max_iterations,
-            request.text, request.image_paths, on_step
-        )
+        tool_registry = ToolRegistry()
+        agent = Agent(_llm, _skill_loader, tool_registry, _max_iterations)
+        answer = agent.run(user_text, request.image_paths, on_step)
         return ChatResponse(reply=answer, steps=steps)
     except Exception as e:
         logger.exception("Chat error")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ========== 静态文件服务 ==========
 @app.get("/uploads/{filename}")
-async def serve_upload(filename: str):
+def serve_upload(filename: str):
     """提供上传文件的访问"""
     file_path = UPLOAD_DIR / filename
     if not file_path.exists():
