@@ -7,6 +7,7 @@ from pathlib import Path
 from adapters.cli import run_cli, run_interactive
 from adapters.server import run_server
 from data.seed_sample_db import ensure_sample_db
+from core.logger import setup_logging
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -23,6 +24,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    # 初始化日志系统（只会在第一次调用时配置 handlers）
+    setup_logging()
     parser = build_parser()
     args = parser.parse_args()
 

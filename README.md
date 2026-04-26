@@ -1,46 +1,248 @@
-# mini-agent
+```markdown
+# Mini Agent
 
-这是一个严格参照 [`Task6.md`](./Task6.md) 创建出来的**框架性工程目录**，目的是先把 task6 要求中的项目结构、文件位置和模块边界搭出来，方便后续继续按教程逐步实现。
+一个极简的 Python Agent 框架，遵循 [agentskills.io](https://agentskills.io) 开放标准。
 
-## 当前状态
+## 5 分钟快速开始
 
-当前仓库**还不是可运行成品**，也**不代表 task6 已完成**。
+### 1. 环境准备
 
-目前只完成了以下内容：
+```bash
 
-- 按 `Task6.md` 中的目标目录结构创建了工程骨架
-- 补齐了教程中提到的大部分文件占位
-- 放入了示例 `skills/`、`tools_builtin/`、`core/`、`adapters/`、`webui/` 等目录
+# 创建虚拟环境
+python -m venv .venv
 
-当前**尚未保证**以下能力已经实现或可正常工作：
+# 激活虚拟环境
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
 
-- Agent loop
-- LLM 调用
-- Skill 扫描与激活
-- CLI 可用
-- WebUI 可用
-- `/api/chat`、`/api/upload`、`/api/providers` 可用
-- 示例数据库与 sqlite skill 可用
+# 安装依赖
+pip install -r requirements.txt
+```
 
-换句话说，这个仓库目前更适合被理解为：
+### 2. 配置 API Key
 
-**“按照 task6 文档先搭出的项目框架，而不是已经完成实现的 mini-agent 项目。”**
+复制 `.env.example` 为 `.env`，填入你使用的 API Key：
 
-## 使用说明
+```bash
+cp .env.example .env
+```
 
-如果你是从 GitHub 看到这个仓库，请注意：
+编辑 `.env` 文件：
 
-- 这里的代码主要用于对照 `Task6.md` 梳理目录结构
-- 当前版本不承诺可以直接运行
-- 后续需要继续按 Phase 1 / Phase 2 / Phase 3 逐步补全实现
+```ini
+MOONSHOT_API_KEY=你的Kimi密钥
+# 或
+DEEPSEEK_API_KEY=你的DeepSeek密钥
+# 或
+DASHSCOPE_API_KEY=你的通义千问密钥
+```
+
+### 3. 初始化示例数据库
+
+```bash
+python main.py setup
+```
+
+### 4. 运行
+
+**命令行模式**：
+
+# 单次执行
+```bash
+python main.py cli "你好，我叫小明"
+```
+
+# 交互模式
+```bash
+python main.py cli --interactive
+```
+
+# WebUI 模式
+```bash
+python main.py webui
+```
+浏览器打开 `http://127.0.0.1:8000`
+
+# powershell运行
+```bash
+.venv\Scripts\python.exe main.py cli "你好我叫小明"
+```
+
+### 5. 测试 Skill
+
+
+# 测试 hello-world skill
+```bash
+python main.py cli "你好"
+```
+
+# 测试数据库查询 skill
+```bash
+python main.py cli "查询薪资最高的3个员工"
+```
 
 ## 目录说明
 
-- `core/`: 教程中定义的核心模块位置
-- `tools_builtin/`: 教程中的四个内置工具文件位置
-- `skills/`: 教程中的示例技能目录
-- `adapters/`: CLI 与 FastAPI 入口位置
-- `webui/`: 单文件前端页面位置
-- `data/`: 示例数据脚本位置
-- `uploads/`: 上传目录
-- `logs/`: 日志目录
+```
+mini-agent/
+├── core/                    # 核心引擎
+│   ├── agent.py            # Agent 主循环
+│   ├── llm.py              # LLM 抽象层（Kimi/Qwen/DeepSeek）
+│   ├── skills.py           # Skill 扫描和加载
+│   └── tools.py            # 工具注册表
+│
+├── tools_builtin/           # 内置工具
+│   ├── file_ops.py         # read / write
+│   ├── shell.py            # bash
+│   └── skill_ops.py        # activate_skill
+│
+├── skills/                  # 可插拔 Skills 目录
+│   ├── hello-world/        # 示例 Skill：打招呼
+│   └── sqlite-sample/      # 示例 Skill：数据库查询
+│
+├── adapters/                # 入口适配器
+│   ├── cli.py              # 命令行入口
+│   └── server.py           # WebUI 服务
+│
+├── webui/                   # 前端文件
+│   └── index.html          # 单文件 Web 界面
+│
+├── data/                    # 数据目录
+│   └── sample.db           # 示例 SQLite 数据库
+│
+├── logs/                    # 日志目录（自动生成）
+├── uploads/                 # 上传文件目录（自动生成）
+│
+├── config.yaml              # 配置文件
+├── main.py                  # 统一入口
+└── requirements.txt         # 依赖列表
+```
+
+## 配置文件
+
+编辑 `config.yaml` 可调整以下配置：
+
+```yaml
+# 当前使用的模型
+active_provider: kimi
+
+# 模型覆盖（不填则使用默认模型）
+providers:
+  kimi:
+    model: kimi-k2.5
+  deepseek:
+    model: deepseek-chat
+
+# Skill 配置
+skills:
+  dir: ./skills
+  enabled: null        # null=全部启用，或填白名单数组
+
+# Agent 配置
+agent:
+  max_iterations: 15
+
+# WebUI 配置
+webui:
+  host: 127.0.0.1
+  port: 8000
+```
+
+
+## 如何添加新 Skill
+
+### 步骤 1：创建目录结构
+
+```
+skills/
+└── your-skill-name/
+    ├── SKILL.md
+    └── scripts/
+        └── your_script.py
+```
+
+### 步骤 2：编写 SKILL.md
+
+```
+---
+name: your-skill-name
+description: 用一句话描述这个技能的功能和使用场景（不超过1024字符，不能包含尖括号）
+---
+```
+
+# 技能标题
+
+## 使用方法
+
+通过 bash 工具执行脚本：
+
+```bash
+python skills/your-skill-name/scripts/your_script.py --参数名 参数值
+```
+
+## 参数说明
+
+| 参数 | 说明 |
+|------|------|
+| --param1 | 参数1的说明 |
+| --param2 | 参数2的说明 |
+
+## 返回格式
+
+```json
+{
+  "success": true,
+  "data": "返回的数据"
+}
+```
+
+## 示例
+
+```bash
+python skills/your-skill-name/scripts/your_script.py --name "张三"
+```
+
+
+### 步骤 3：编写脚本
+
+`scripts/your_script.py` 示例：
+
+```python
+#!/usr/bin/env python3
+import argparse
+import json
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", type=str, required=True)
+    args = parser.parse_args()
+    
+    result = {"success": True, "data": f"Hello, {args.name}"}
+    print(json.dumps(result, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
+```
+
+### 步骤 4：验证
+
+重启 Agent 后执行：
+
+```bash
+python main.py cli "你的测试问题"
+```
+
+Agent 会自动扫描 `skills/` 目录，根据 `SKILL.md` 的描述判断何时调用你的技能。
+
+### Skill 规范要求
+
+| 规则 | 要求 |
+|------|------|
+| 文件名 | 必须为 `SKILL.md`（大小写敏感） |
+| `name` | 小写字母/数字/连字符，≤64字符，不能以连字符开头/结尾，不能有连续连字符 |
+| `description` | ≤1024字符，不能包含 `<` 或 `>` |
+| 可选字段 | `license`、`compatibility`、`metadata` |
+```

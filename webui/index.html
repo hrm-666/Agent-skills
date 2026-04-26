@@ -6,64 +6,237 @@
   <title>Mini Agent</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-neutral-50 text-neutral-900">
-  <div class="mx-auto max-w-5xl p-6">
-    <div class="mb-4 flex items-center justify-between border-b border-neutral-200 pb-4">
-      <h1 class="text-xl font-semibold">Mini Agent</h1>
-      <select id="provider" class="rounded border border-neutral-300 px-3 py-2"></select>
-    </div>
-    <div id="events" class="mb-4 min-h-[420px] rounded border border-neutral-200 bg-white p-4"></div>
-    <div class="rounded border border-neutral-200 bg-white p-4">
-      <input id="file" type="file" multiple class="mb-3 block">
-      <textarea id="text" class="mb-3 w-full rounded border border-neutral-300 p-3" rows="4" placeholder="输入内容..."></textarea>
-      <button id="send" class="rounded bg-indigo-600 px-4 py-2 text-white">发送</button>
-    </div>
-  </div>
-  <script>
-    const events = document.getElementById('events');
-    const provider = document.getElementById('provider');
-    const text = document.getElementById('text');
-    const fileInput = document.getElementById('file');
-    const uploadPaths = [];
+<body class="bg-neutral-50 text-neutral-900" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+  <div class="h-screen flex flex-col max-w-6xl mx-auto px-6 py-5">
 
-    function appendLine(content) {
+    <!-- Top Bar -->
+    <header class="flex items-center justify-between border-b border-neutral-200 pb-4 shrink-0">
+      <h1 class="text-base font-semibold tracking-tight">Mini Agent</h1>
+
+      <div class="flex items-center gap-2 text-sm">
+        <span class="text-neutral-500">Model:</span>
+        <select
+          id="provider"
+          class="border border-neutral-300 rounded-md px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600"
+        ></select>
+      </div>
+    </header>
+
+    <!-- Chat Area -->
+    <main
+      id="chat"
+      class="flex-1 overflow-y-auto py-6 space-y-4 min-h-0"
+    ></main>
+
+    <!-- Input Area -->
+    <footer class="border-t border-neutral-200 pt-4 shrink-0">
+      <div
+        id="dropZone"
+        class="border border-neutral-300 rounded-xl bg-white px-3 py-3"
+      >
+        <div id="filePreview" class="mb-3 flex flex-wrap gap-2"></div>
+
+        <div class="flex items-end gap-3">
+          <button
+            id="uploadBtn"
+            class="px-3 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-100"
+          >
+            📎
+          </button>
+
+          <textarea
+            id="input"
+            rows="2"
+            placeholder="输入内容..."
+            class="flex-1 resize-none border border-neutral-300 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600"
+          ></textarea>
+
+          <button
+            id="sendBtn"
+            class="px-5 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            发送
+          </button>
+        </div>
+      </div>
+
+      <input type="file" id="fileInput" multiple class="hidden">
+    </footer>
+  </div>
+
+  <script>
+    const chatDiv = document.getElementById('chat');
+    const providerSelect = document.getElementById('provider');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const dropZone = document.getElementById('dropZone');
+
+    let uploadedPaths = [];
+
+    function escapeHtml(text) {
       const div = document.createElement('div');
-      div.className = 'mb-2 whitespace-pre-wrap text-sm';
-      div.textContent = content;
-      events.appendChild(div);
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function addMessage(role, content, files = []) {
+      const wrapper = document.createElement('div');
+      wrapper.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
+
+      const bubble = document.createElement('div');
+      bubble.className = `max-w-[80%] rounded-2xl border px-4 py-3 bg-white ${
+        role === 'user'
+          ? 'border-neutral-300'
+          : 'border-neutral-200'
+      }`;
+
+      let html = `<div class="text-xs font-medium mb-2 ${role === 'user' ? 'text-neutral-500' : 'text-indigo-600'}">${role === 'user' ? 'User' : 'Agent'}</div>`;
+
+      if (files.length) {
+        html += `<div class="text-xs text-neutral-500 mb-2">${files.map(f => `📄 ${escapeHtml(f)}`).join('<br>')}</div>`;
+      }
+
+      html += `<div class="text-sm whitespace-pre-wrap leading-6">${escapeHtml(content)}</div>`;
+
+      bubble.innerHTML = html;
+      wrapper.appendChild(bubble);
+      chatDiv.appendChild(wrapper);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    function addToolCall(name, args, result = null, isError = false) {
+      const row = document.createElement('details');
+      row.className = 'text-sm border border-neutral-200 rounded-lg bg-white px-4 py-3';
+
+      const summary = document.createElement('summary');
+      summary.className = `cursor-pointer ${isError ? 'text-red-600' : 'text-neutral-700'}`;
+      summary.textContent = `🔧 ${name}`;
+      row.appendChild(summary);
+
+      const detail = document.createElement('div');
+      detail.className = 'mt-2 text-xs text-neutral-500 whitespace-pre-wrap font-mono';
+      detail.textContent = JSON.stringify({ args, result }, null, 2);
+      row.appendChild(detail);
+
+      chatDiv.appendChild(row);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    function renderFiles() {
+      filePreview.innerHTML = uploadedPaths.map(path => {
+        const name = path.split('/').pop();
+        return `<div class="text-xs border border-neutral-300 rounded-md px-2 py-1 bg-neutral-50">${escapeHtml(name)}</div>`;
+      }).join('');
     }
 
     async function loadProviders() {
-      const items = await fetch('/api/providers').then(r => r.json());
-      items.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item.name;
-        option.textContent = item.name;
-        provider.appendChild(option);
-      });
+      const saved = localStorage.getItem('selected_provider');
+      const res = await fetch('/api/providers');
+      const items = await res.json();
+
+      providerSelect.innerHTML = items.map(item => `
+        <option value="${item.name}" ${!item.configured ? 'disabled' : ''}>
+          ${item.name}${item.configured ? '' : ' (无密钥)'}
+        </option>
+      `).join('');
+
+      if (saved) providerSelect.value = saved;
     }
 
-    fileInput.addEventListener('change', async () => {
+    providerSelect.onchange = () => {
+      localStorage.setItem('selected_provider', providerSelect.value);
+    };
+
+    uploadBtn.onclick = () => fileInput.click();
+
+    fileInput.onchange = async () => {
       for (const file of fileInput.files) {
         const form = new FormData();
         form.append('file', file);
-        const result = await fetch('/api/upload', { method: 'POST', body: form }).then(r => r.json());
-        uploadPaths.push(result.path);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: form
+        });
+
+        const data = await res.json();
+        uploadedPaths.push(data.path);
       }
+
+      renderFiles();
+      fileInput.value = '';
+    };
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
     });
 
-    document.getElementById('send').addEventListener('click', async () => {
-      appendLine(`User: ${text.value}`);
-      const result = await fetch('/api/chat', {
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      for (const file of e.dataTransfer.files) {
+        const form = new FormData();
+        form.append('file', file);
+
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: form
+        });
+
+        const data = await res.json();
+        uploadedPaths.push(data.path);
+      }
+      renderFiles();
+    });
+
+    async function send() {
+      const text = input.value.trim();
+      if (!text && !uploadedPaths.length) return;
+
+      const fileNames = uploadedPaths.map(p => p.split('/').pop());
+      addMessage('user', text, fileNames);
+
+      const paths = [...uploadedPaths];
+      uploadedPaths = [];
+      renderFiles();
+      input.value = '';
+
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.value, image_paths: uploadPaths, provider: provider.value })
-      }).then(r => r.json());
-      (result.steps || []).forEach(step => appendLine(`🔧 ${step.name}`));
-      appendLine(`Agent: ${result.reply}`);
-      text.value = '';
-      uploadPaths.length = 0;
-      fileInput.value = '';
+        body: JSON.stringify({
+          text,
+          image_paths: paths,
+          provider: providerSelect.value
+        })
+      });
+
+      const data = await res.json();
+
+      (data.steps || []).forEach(step => {
+        if (step.type === 'tool_call') {
+          addToolCall(step.name, step.args);
+        }
+        if (step.type === 'tool_result') {
+          addToolCall(step.name, {}, step.result);
+        }
+        if (step.type === 'error') {
+          addToolCall('Error', {}, step.message, true);
+        }
+      });
+
+      addMessage('agent', data.reply || '');
+    }
+
+    sendBtn.onclick = send;
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
     });
 
     loadProviders();

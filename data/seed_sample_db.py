@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_sample_db(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     if db_path.exists():
+        logger.info("sample.db 已存在: %s", db_path)
         return
     with sqlite3.connect(db_path) as conn:
         conn.execute(
@@ -37,3 +41,4 @@ def ensure_sample_db(db_path: Path) -> None:
             rows,
         )
         conn.commit()
+    logger.info("已初始化 sample.db: %s, rows_inserted=%s", db_path, len(rows))

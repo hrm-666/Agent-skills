@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-
+import logging
 import yaml
 from dotenv import load_dotenv
 
@@ -13,9 +13,14 @@ from core.tools import ToolRegistry
 from tools_builtin.file_ops import read, write
 from tools_builtin.shell import bash
 from tools_builtin.skill_ops import build_activate_skill
+from core.logger import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 def create_agent(provider_override: str | None = None) -> Agent:
+    # 确保日志已初始化（幂等）
+    setup_logging()
     load_dotenv()
     with Path("config.yaml").open("r", encoding="utf-8") as file:
         config = yaml.safe_load(file) or {}
@@ -84,6 +89,7 @@ def create_agent(provider_override: str | None = None) -> Agent:
 
 
 def run_cli(message: str) -> str:
+    logger.info(f"CLI 请求: {message[:200]}")
     return create_agent().run(message)
 
 
@@ -96,4 +102,5 @@ def run_interactive() -> None:
             return
         if not text:
             continue
+        logger.info(f"CLI 交互消息: {text[:200]}")
         print(agent.run(text))
