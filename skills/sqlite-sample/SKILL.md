@@ -5,36 +5,46 @@ description: Query the employee database for information like salaries, departme
 
 # SQLite Sample Skill
 
-This skill allows querying the `employees` table in the sample database.
+This skill queries the `employees` table in `data/sample.db`.
 
 ## Schema
 
 Table: `employees`
-- `id`: Integer (Primary Key)
+- `id`: Integer primary key
 - `name`: Text
 - `department`: Text
 - `salary`: Real
-- `hire_date`: Text (YYYY-MM-DD)
+- `hire_date`: Text, formatted as YYYY-MM-DD
 
 ## How to use
 
-1. Formulate a valid SQL SELECT query based on the user's request.
-2. Execute the query using the bash tool:
+1. Formulate one valid SQL `SELECT` query based on the user's request.
+2. Execute the query with the bash tool:
 
-       bash: python skills/sqlite-sample/scripts/query.py --sql "SELECT ..."
+       python skills/sqlite-sample/scripts/query.py --sql "SELECT ..."
 
-3. Present the JSON results to the user.
+3. If the command returns JSON rows, present those rows directly to the user in a concise natural-language answer. Do not inspect the database again unless the command returns an explicit error.
 
 ## Constraints
 
-- ONLY SELECT queries are allowed.
-- Maximum LIMIT is 100.
-- Do not perform updates or deletes.
+- Only `SELECT` queries are allowed.
+- Maximum `LIMIT` is 100.
+- Do not perform updates, inserts, deletes, drops, or filesystem cleanup.
 
 ## Examples
 
-User: "谁的工资最高？"
-Action: `python skills/sqlite-sample/scripts/query.py --sql "SELECT name, salary FROM employees ORDER BY salary DESC LIMIT 1"`
+User: "查询薪资最高的3个员工"
 
-User: "研发部有多少人？"
-Action: `python skills/sqlite-sample/scripts/query.py --sql "SELECT count(*) FROM employees WHERE department='研发部'"`
+Action:
+
+       python skills/sqlite-sample/scripts/query.py --sql "SELECT name, salary, department FROM employees ORDER BY salary DESC LIMIT 3"
+
+Response: summarize the three returned employees.
+
+User: "Engineering 部门有多少人？"
+
+Action:
+
+       python skills/sqlite-sample/scripts/query.py --sql "SELECT COUNT(*) AS count FROM employees WHERE department='Engineering'"
+
+Response: provide the count.

@@ -5,3 +5,5 @@ uploads/
 *.db
 .venv/
 venv/
+dist/
+API-CN.pdf
