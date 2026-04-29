@@ -18,7 +18,7 @@ This skill exists to verify that skill activation and bash execution work correc
 
 ## Example
 
-User: "你好,我叫席朋飞"
-Action: `python skills/hello-world/scripts/hello.py "席朋飞"`
-Output: `你好,席朋飞!Mini Agent 已经正常运作。`
-Response to user: 你好,席朋飞!Mini Agent 已经正常运作。
+User: "你好,我叫king"
+Action: `python skills/hello-world/scripts/hello.py "king"`
+Output: `你好,king!Mini Agent 已经正常运作。`
+Response to user: 你好,king!Mini Agent 已经正常运作。

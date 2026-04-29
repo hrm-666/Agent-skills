@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from adapters.cli import run_cli, run_interactive
-from adapters.server import run_server
+from core.logging_config import setup_logging
 from data.seed_sample_db import ensure_sample_db
+
+logger = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -23,8 +26,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+
+    setup_logging()
+
     parser = build_parser()
     args = parser.parse_args()
+    logger.info("main command=%s", args.command or "webui")
 
     if args.command == "setup":
         ensure_sample_db(Path("data") / "sample.db")
@@ -41,6 +51,8 @@ def main() -> int:
         return 0
 
     if args.command in (None, "webui"):
+        from adapters.server import run_server
+
         run_server()
         return 0
 

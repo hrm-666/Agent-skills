@@ -1,5 +1,8 @@
+import logging
 from typing import Literal, Optional
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 ProviderName = Literal["kimi", "qwen", "deepseek"]
 
@@ -42,3 +45,24 @@ class LLM:
         调用 chat.completions.create
         返回结构化的 message(含 .content 和 .tool_calls)
         """
+        api_messages = [
+            {"role": "system", "content": system},
+            *messages,
+        ]
+
+        logger.info("llm request provider=%s model=%s messages=%s tools=%s", self.provider, self.model, len(api_messages), len(tools))
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=api_messages,
+            tools=tools,
+        )
+
+        message = response.choices[0].message
+        logger.info(
+            "llm response provider=%s model=%s has_tool_calls=%s content_len=%s",
+            self.provider,
+            self.model,
+            bool(getattr(message, "tool_calls", None)),
+            len(message.content or ""),
+        )
+        return message
