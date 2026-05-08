@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 MAX_CHARS = 10000
 ALLOWED_WRITE_DIRS = ("workspace", "uploads", "logs")
+logger = logging.getLogger(__name__)
 
 
 def read(path: str) -> str:
@@ -38,4 +40,5 @@ def write(path: str, content: str) -> str:
 
     resolved.parent.mkdir(parents=True, exist_ok=True)
     resolved.write_text(content, encoding="utf-8")
+    logger.info("write path=%s chars=%s", resolved, len(content))
     return f"OK: wrote {len(content)} chars to {resolved}"

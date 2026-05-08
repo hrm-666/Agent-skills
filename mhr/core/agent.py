@@ -7,7 +7,18 @@ import mimetypes
 from pathlib import Path
 from typing import Callable, Optional
 
+from core.tools import ToolConfirmationRequired
+
 logger = logging.getLogger(__name__)
+
+
+class AgentConfirmationRequired(Exception):
+    def __init__(self, tool_name: str, arguments: dict, message: str, risk: str = "high"):
+        super().__init__(message)
+        self.tool_name = tool_name
+        self.arguments = arguments
+        self.message = message
+        self.risk = risk
 
 
 class Agent:
@@ -70,7 +81,11 @@ class Agent:
                         arguments = {}
                         result = f"[error] Invalid tool arguments : {exc}"
                     else:
-                        result = self.tool_registry.execute(tool_name, arguments)
+                        try:
+                            result = self.tool_registry.execute(tool_name, arguments)
+                        except ToolConfirmationRequired as exc:
+                            logger.info("agent confirmation required tool=%s", tool_name)
+                            raise AgentConfirmationRequired(tool_name, arguments, exc.message, exc.risk) from exc
 
                     last_progress = result
                     logger.info(
@@ -135,6 +150,9 @@ class Agent:
     Rules:
     - Always use activate_skill BEFORE bash-ing into a skill's scripts
     - After activating a skill, follow its SKILL.md instructions exactly
+    - For user-created, deleted, or modified files, operate inside workspace/ unless the user explicitly asks otherwise
+    - When using bash for file operations, always include explicit workspace/ paths instead of bare filenames
+    - Prefer the write tool over bash when creating or editing text files
     - Keep responses concise unless user asks for detail
     """.strip()
 

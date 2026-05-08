@@ -244,6 +244,7 @@
       const row = document.createElement('div');
       row.id = id;
       row.className = 'flex justify-start items-end gap-2';
+      messageStates.set(id, { reply: '', steps: [], confirmation: null, confirmationResult: null, error: null });
       row.innerHTML = `
         <div style="width:26px;height:26px;border-radius:50%;background:#3b7dd8;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:#fff;margin-bottom:2px;">A</div>
         <div class="msg-agent max-w-2xl" style="padding:7px 13px;">
@@ -253,29 +254,44 @@
       scrollToBottom();
     }
 
-    function updateAgentMessage(id, reply, steps, error) {
+    function updateAgentMessage(id, reply, steps, error, confirmation, confirmationResult) {
       const row = document.getElementById(id);
       if (!row) return;
 
+      const previous = messageStates.get(id) || {
+        reply: '',
+        steps: [],
+        confirmation: null,
+        confirmationResult: null,
+        error: null,
+      };
+      const next = {
+        reply: reply !== undefined ? (reply || '') : previous.reply,
+        steps: steps !== undefined && steps !== null ? steps : previous.steps,
+        error: error !== undefined ? error : previous.error,
+        confirmation: confirmation !== undefined ? confirmation : previous.confirmation,
+        confirmationResult: confirmationResult !== undefined ? confirmationResult : previous.confirmationResult,
+      };
+      if (next.confirmationResult) {
+        next.confirmation = null;
+      }
+      messageStates.set(id, next);
+
       row.className = 'flex justify-start items-end gap-2';
 
-      if (!error) {
-        messageStates.set(id, { reply: reply || '', steps: steps || [] });
-      }
-
-      if (error) {
+      if (next.error) {
         row.innerHTML = `
           <div style="width:26px;height:26px;border-radius:50%;background:#e03e3e;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:#fff;margin-bottom:2px;">!</div>
-          <div class="msg-agent px-4 py-3 max-w-2xl text-sm" style="color:#dc2626;">${escapeHtml(error)}</div>`;
+          <div class="msg-agent px-4 py-3 max-w-2xl text-sm" style="color:#dc2626;">${escapeHtml(next.error)}</div>`;
         scrollToBottom();
         return;
       }
 
       let html = '';
 
-      if (steps && steps.length) {
+      if (next.steps && next.steps.length) {
         html += '<div class="space-y-1 mb-3">';
-        steps.forEach((step, index) => {
+        next.steps.forEach((step, index) => {
           const argsStr = JSON.stringify(step.args).slice(0, 100);
           const detailId = `detail-${id}-${index}`;
           const detail = JSON.stringify(step.result, null, 2);
@@ -293,12 +309,74 @@
         html += '</div>';
       }
 
-      html += `<div class="text-sm whitespace-pre-wrap leading-relaxed" style="color:#1e293b;">${escapeHtml(reply || '执行中…')}</div>`;
+      if (next.confirmation) {
+        const command = next.confirmation.args?.command || '';
+        html += `
+          <div class="mb-3 rounded-lg border px-3 py-3 text-xs" style="border-color:#fcd34d;background:#fffbeb;color:#92400e;">
+            <div style="font-weight:600;">危险操作确认</div>
+            <div class="mt-1">${escapeHtml(next.confirmation.message || '该操作需要确认后才能执行。')}</div>
+            <div class="mt-2 rounded border px-2 py-2 font-mono" style="border-color:#fde68a;background:#fff7d6;color:#78350f;word-break:break-all;">${escapeHtml(command)}</div>
+            <button
+              type="button"
+              data-confirmation-id="${escapeHtml(next.confirmation.confirmation_id || '')}"
+              data-message-id="${escapeHtml(id)}"
+              class="mt-3 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+              style="background:#f59e0b;color:#fff;"
+            >确认执行</button>
+          </div>`;
+      }
+
+      if (next.confirmationResult) {
+        html += `
+          <div class="mb-3 rounded-lg border px-3 py-3 text-xs" style="border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8;">
+            <div style="font-weight:600;">已确认执行</div>
+            <div class="mt-1">${escapeHtml(next.confirmationResult.summary || '危险命令已执行。')}</div>
+          </div>`;
+      }
+
+      html += `<div class="text-sm whitespace-pre-wrap leading-relaxed" style="color:#1e293b;">${escapeHtml(next.reply || '执行中…')}</div>`;
 
       row.innerHTML = `
         <div style="width:26px;height:26px;border-radius:50%;background:#3b7dd8;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:#fff;margin-bottom:2px;">A</div>
         <div class="msg-agent max-w-2xl" style="padding:7px 13px;">${html}</div>`;
       scrollToBottom();
+    }
+
+    async function confirmDangerousAction(messageId, confirmationId, button) {
+      if (!confirmationId) return;
+      const state = messageStates.get(messageId) || { reply: '', steps: [] };
+      button.disabled = true;
+      button.textContent = '执行中…';
+
+      try {
+        const res = await fetch('/api/tool/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmation_id: confirmationId }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || '确认执行失败');
+        }
+
+        const nextSteps = [
+          ...(state.steps || []),
+          { name: data.tool, args: data.args, result: data.result },
+        ];
+        const nextReply = state.reply && state.reply !== '执行中…'
+          ? state.reply
+          : '已确认执行危险命令。';
+        updateAgentMessage(
+          messageId,
+          nextReply,
+          nextSteps,
+          null,
+          null,
+          { summary: `已执行 ${data.tool}。` },
+        );
+      } catch (error) {
+        updateAgentMessage(messageId, undefined, undefined, error.message || '确认执行失败');
+      }
     }
 
     function appendError(message) {
@@ -380,13 +458,15 @@
             updateAgentMessage(agentMsgId, '已连接，等待模型决策…', steps, null);
           } else if (event.event === 'tool_result') {
             steps.push(event.data);
-            updateAgentMessage(agentMsgId, reply || '执行中…', steps, null);
+            updateAgentMessage(agentMsgId, reply || '执行中…', steps, null, null, null);
           } else if (event.event === 'assistant_delta') {
             reply += event.data.text || '';
-            updateAgentMessage(agentMsgId, reply, steps, null);
+            updateAgentMessage(agentMsgId, reply, steps, null, null, null);
+          } else if (event.event === 'confirmation_required') {
+            updateAgentMessage(agentMsgId, reply || '操作已暂停，等待确认。', steps, null, event.data, null);
           } else if (event.event === 'agent_done') {
             reply = event.data.reply || reply;
-            updateAgentMessage(agentMsgId, reply, steps, null);
+            updateAgentMessage(agentMsgId, reply, steps, null, null, null);
           } else if (event.event === 'agent_error') {
             updateAgentMessage(agentMsgId, null, null, event.data.error || '请求失败');
           }
@@ -426,6 +506,15 @@
           const data = await res.json();
           if (!res.ok) {
             updateAgentMessage(agentMsgId, null, null, data.detail || '请求失败');
+          } else if (data.status === 'confirmation_required') {
+            updateAgentMessage(
+              agentMsgId,
+              '操作已暂停，等待确认。',
+              data.steps || [],
+              null,
+              data.confirmation || null,
+              null,
+            );
           } else {
             updateAgentMessage(agentMsgId, data.reply || '', data.steps || [], null);
           }
@@ -445,6 +534,16 @@
       const path = button.getAttribute('data-path');
       uploadedFiles = uploadedFiles.filter(item => item.path !== path);
       renderAttachments();
+    });
+
+    chatBox.addEventListener('click', event => {
+      const button = event.target.closest('button[data-confirmation-id]');
+      if (!button) return;
+      confirmDangerousAction(
+        button.getAttribute('data-message-id'),
+        button.getAttribute('data-confirmation-id'),
+        button,
+      );
     });
 
     fileInput.addEventListener('change', async event => {

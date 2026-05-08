@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
+from core.agent import AgentConfirmationRequired
 from core.agent import Agent
 from core.llm import LLM, PROVIDERS
 from core.skills import SkillLoader
@@ -52,7 +53,7 @@ def create_agent(provider_override: str | None = None) -> Agent:
     )
     tool_registry.register(
         "bash",
-        "Execute a shell command. Use this to run skill scripts, curl APIs, install packages, or any command-line operation. Returns stdout+stderr, truncated to 10,000 chars.",
+        "Execute a shell command. Use this to run skill scripts, curl APIs, install packages, or any command-line operation. For user file operations, always use explicit paths under workspace/. Returns stdout+stderr, truncated to 10,000 chars.",
         {
             "type": "object",
             "properties": {
@@ -82,6 +83,11 @@ def create_agent(provider_override: str | None = None) -> Agent:
         max_iterations=config.get("agent", {}).get("max_iterations", 15),
     )
 
+
+def format_confirmation_message(exc: AgentConfirmationRequired) -> str:
+    return f"[confirm required] {exc.message}"
+
+
 def run_interactive() -> None:
     agent = create_agent()
     print("进入交互模式，输入 exit 退出。")
@@ -91,4 +97,7 @@ def run_interactive() -> None:
             return
         if not text:
             continue
-        print(agent.run(text))
+        try:
+            print(agent.run(text))
+        except AgentConfirmationRequired as exc:
+            print(format_confirmation_message(exc))

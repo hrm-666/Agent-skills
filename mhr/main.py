@@ -4,7 +4,8 @@ import argparse
 import logging
 import sys
 
-from adapters.cli import create_agent, run_interactive
+from adapters.cli import create_agent, format_confirmation_message, run_interactive
+from core.agent import AgentConfirmationRequired
 from core.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,10 @@ def main() -> int:
             return 0
         if not args.message:
             parser.error("cli 模式需要提供消息，或使用 --interactive")
-        print(create_agent().run(args.message))
+        try:
+            print(create_agent().run(args.message))
+        except AgentConfirmationRequired as exc:
+            print(format_confirmation_message(exc))
         return 0
 
     if args.command in (None, "webui"):
