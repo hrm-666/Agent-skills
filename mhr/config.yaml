@@ -6,7 +6,7 @@ providers:
   qwen:
     model: qwen-vl-max
   deepseek:
-    model: deepseek-chat
+    model: deepseek-v4-flash
 
 skills:
   dir: ./skills

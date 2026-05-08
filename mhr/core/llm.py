@@ -21,7 +21,7 @@ PROVIDERS = {
     },
     "deepseek": {
         "base_url": "https://api.deepseek.com/v1",
-        "default_model": "deepseek-chat",
+        "default_model": "deepseek-v4-flash",
         "supports_vision": False,
         "env_key": "DEEPSEEK_API_KEY",
     },

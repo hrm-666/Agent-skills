@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+import base64
 import json
 import logging
+import mimetypes
+from pathlib import Path
 from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
+
 
 class Agent:
     def __init__(
@@ -39,9 +45,7 @@ class Agent:
         3. 超过 max_iterations 返回错误提示
         """
         system = self._build_system_prompt()
-        messages = [
-            {"role": "user", "content": user_text}
-        ]
+        messages = [self._build_user_message(user_text, image_paths)]
         tools = self.tool_registry.get_openai_schemas()
 
         last_progress = ""
@@ -94,6 +98,7 @@ class Agent:
         
         logger.info("agent max_iterations reached max=%s last_progress_len=%s", self.max_iterations, len(last_progress))
         return f"[error] Agent failed to complete task within {self.max_iterations} iterations. Last progress: {last_progress}"
+
     def _build_system_prompt(self) -> str:
         skill_catalog = self.skill_loader.get_catalog_text()
         return f"""
@@ -112,4 +117,47 @@ class Agent:
     - Keep responses concise unless user asks for detail
     """.strip()
 
-        
+    def _build_user_message(self, user_text: str, image_paths: Optional[list[str]]) -> dict:
+        if not image_paths:
+            return {"role": "user", "content": user_text}
+
+        content: list[dict] = []
+
+        for image_path in image_paths:
+            file_path = self._resolve_local_path(image_path)
+            if not file_path.exists():
+                logger.warning("image file not found path=%s", image_path)
+                content.append({"type": "text", "text": f"[图片不存在: {image_path}]"})
+                continue
+
+            mime_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+            if not mime_type.startswith("image/"):
+                content.append({"type": "text", "text": f"[附件: {image_path}]"})
+                continue
+
+            if not self.llm.supports_vision:
+                logger.warning("provider=%s does not support vision, image passed as text path=%s", self.llm.provider, image_path)
+                content.append({"type": "text", "text": f"[图片: {image_path}，当前模型不支持视觉输入]"})
+                continue
+
+            image_bytes = file_path.read_bytes()
+            image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{image_base64}"},
+            })
+
+        content.append({"type": "text", "text": user_text})
+        return {"role": "user", "content": content}
+
+    def _resolve_local_path(self, path: str) -> Path:
+        file_path = Path(path).expanduser()
+        if file_path.is_absolute():
+            try:
+                relative_path = file_path.relative_to(file_path.anchor)
+            except ValueError:
+                return file_path
+            if relative_path.parts and relative_path.parts[0] == "uploads":
+                return Path.cwd() / relative_path
+            return file_path
+        return Path.cwd() / file_path

@@ -16,7 +16,6 @@ from pydantic import BaseModel
 
 from adapters.cli import create_agent
 from core.llm import PROVIDERS
-from data.seed_sample_db import ensure_sample_db
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,6 @@ def build_app() -> FastAPI:
 
 
 def run_server() -> None:
-    ensure_sample_db(Path("data") / "sample.db")
     with Path("config.yaml").open("r", encoding="utf-8") as file:
         config = yaml.safe_load(file) or {}
     webui_config = config.get("webui", {})

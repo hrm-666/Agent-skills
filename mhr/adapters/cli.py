@@ -82,11 +82,6 @@ def create_agent(provider_override: str | None = None) -> Agent:
         max_iterations=config.get("agent", {}).get("max_iterations", 15),
     )
 
-
-def run_cli(message: str) -> str:
-    return create_agent().run(message)
-
-
 def run_interactive() -> None:
     agent = create_agent()
     print("进入交互模式，输入 exit 退出。")
