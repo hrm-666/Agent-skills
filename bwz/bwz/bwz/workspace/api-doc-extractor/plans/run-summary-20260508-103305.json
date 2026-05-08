@@ -1,0 +1,401 @@
+{
+  "ok": true,
+  "stage": "request_planning",
+  "message": "阶段三请求计划已运行：已提取文档文本，解析 GET endpoint，并尝试用参数表值拼接 request_url。",
+  "doc": {
+    "path": "API-CN1.pdf",
+    "exists": true,
+    "suffix": ".pdf"
+  },
+  "extraction": {
+    "extractor": "pymupdf",
+    "char_count": 3558,
+    "line_count": 87,
+    "candidate_urls_count": 4,
+    "text_preview": "获取订单信息\n                      GET https://api.pledgebox.com/api/openapi/orders\n            api_token ***\n            project_id 必填 100001\n            page 选填 分页，不填时默认page = 1\n            is_completed 选填 濄\n            pb_id 选填 获取指定订单详情\n            email 选填 获取指定邮箱的订单详情\n            order_status 选填 获取指定订单状态的订单。 可选参数：unlock/lock/shipped/refunded\n            响应参数：\n              名称 类型 描述\n              id Number 订单ID\n              pbid String PledgeBox ID\n              ks...",
+    "warnings": []
+  },
+  "parse": {
+    "interfaces_count": 3,
+    "selected_index": 0,
+    "selected_title": "获取订单信息"
+  },
+  "request_plan": {
+    "method": "GET",
+    "title": "获取订单信息",
+    "endpoint_url": "https://api.pledgebox.com/api/openapi/orders",
+    "request_url": "https://api.pledgebox.com/api/openapi/orders?api_token=***&project_id=100001&is_completed=1",
+    "query": {
+      "api_token": "***",
+      "project_id": "100001",
+      "is_completed": "1"
+    },
+    "query_param_paths": [
+      "api_token",
+      "project_id",
+      "is_completed"
+    ],
+    "filled_required_params": [
+      "api_token",
+      "project_id"
+    ],
+    "filled_optional_params": [
+      "is_completed"
+    ],
+    "fallback_filled_params": [
+      "api_token",
+      "is_completed"
+    ],
+    "skipped_optional_params": [
+      "page",
+      "pb_id",
+      "email",
+      "order_status"
+    ],
+    "missing_required_params": [],
+    "risk_level": "read_only",
+    "params": [
+      {
+        "path": "api_token",
+        "type": null,
+        "required": true,
+        "description": "",
+        "value": "***",
+        "value_source": "document_url_fallback",
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "project_id",
+        "type": null,
+        "required": true,
+        "description": "",
+        "value": "100001",
+        "value_source": "request_table",
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "page",
+        "type": null,
+        "required": false,
+        "description": "分页，不填时默认page = 1",
+        "value": null,
+        "value_source": null,
+        "default_value": "1",
+        "enum_values": []
+      },
+      {
+        "path": "is_completed",
+        "type": null,
+        "required": false,
+        "description": "濄",
+        "value": "1",
+        "value_source": "document_url_fallback",
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "pb_id",
+        "type": null,
+        "required": false,
+        "description": "获取指定订单详情",
+        "value": null,
+        "value_source": null,
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "email",
+        "type": null,
+        "required": false,
+        "description": "获取指定邮箱的订单详情",
+        "value": null,
+        "value_source": null,
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "order_status",
+        "type": null,
+        "required": false,
+        "description": "获取指定订单状态的订单。 可选参数：unlock/lock/shipped/refunded",
+        "value": null,
+        "value_source": null,
+        "default_value": null,
+        "enum_values": [
+          "unlock",
+          "lock",
+          "shipped",
+          "refunded"
+        ]
+      }
+    ],
+    "response_fields": [
+      {
+        "path": "id",
+        "type": "Number",
+        "description": "订单ID"
+      },
+      {
+        "path": "pbid",
+        "type": "String",
+        "description": "PledgeBox ID"
+      },
+      {
+        "path": "ks_id",
+        "type": "Number",
+        "description": "KS 的订单ID"
+      },
+      {
+        "path": "sequence",
+        "type": "Number",
+        "description": "KS 的订单序号"
+      },
+      {
+        "path": "order_status",
+        "type": "String",
+        "description": "订单状态"
+      },
+      {
+        "path": "survey_status",
+        "type": "String",
+        "description": "Survey 状态"
+      },
+      {
+        "path": "date_confirmed",
+        "type": "String",
+        "description": "完成Survey 的时间"
+      },
+      {
+        "path": "courier_name",
+        "type": "String",
+        "description": "快递名字"
+      },
+      {
+        "path": "tracking_code",
+        "type": "String",
+        "description": "快递追踪单号"
+      },
+      {
+        "path": "email",
+        "type": "String",
+        "description": "邮箱地址"
+      },
+      {
+        "path": "shipping_address",
+        "type": "Object",
+        "description": "收件人地址"
+      },
+      {
+        "path": "shipping_address.address",
+        "type": "String",
+        "description": "地址"
+      },
+      {
+        "path": "shipping_address.address2",
+        "type": "String",
+        "description": "地址2"
+      },
+      {
+        "path": "shipping_address.city",
+        "type": "String",
+        "description": "城市"
+      },
+      {
+        "path": "shipping_address.state",
+        "type": "String",
+        "description": "州"
+      },
+      {
+        "path": "shipping_address.zip",
+        "type": "String",
+        "description": "邮政编码"
+      },
+      {
+        "path": "shipping_address.country",
+        "type": "String",
+        "description": "国家"
+      },
+      {
+        "path": "shipping_address.country_code",
+        "type": "String",
+        "description": "国家简码"
+      },
+      {
+        "path": "shipping_address.phone",
+        "type": "String",
+        "description": "电话号码"
+      },
+      {
+        "path": "shipping_address.name",
+        "type": "String",
+        "description": "名字"
+      },
+      {
+        "path": "paid_amount",
+        "type": "Number",
+        "description": "支付总金额，KS 支付金额与PB 支付金额的和"
+      },
+      {
+        "path": "credit_offer",
+        "type": "String",
+        "description": "Creator 给订单的优惠金额"
+      },
+      {
+        "path": "balance",
+        "type": "String",
+        "description": "余款，为负时表示backer 欠款"
+      },
+      {
+        "path": "reward",
+        "type": "Object",
+        "description": "Reward 信息"
+      },
+      {
+        "path": "reward.id",
+        "type": "Number",
+        "description": "Reward ID"
+      },
+      {
+        "path": "reward.name",
+        "type": "String",
+        "description": "Reward 名字"
+      },
+      {
+        "path": "reward.price",
+        "type": "String",
+        "description": "Reward 价格"
+      },
+      {
+        "path": "reward.items",
+        "type": "Array",
+        "description": "Reward 包含的产品"
+      },
+      {
+        "path": "reward.items[].id",
+        "type": "Number",
+        "description": "产品ID"
+      },
+      {
+        "path": "reward.items[].name",
+        "type": "String",
+        "description": "产品名"
+      },
+      {
+        "path": "reward.items[].sku",
+        "type": "String",
+        "description": "款名"
+      },
+      {
+        "path": "reward.items[].variant",
+        "type": "Array",
+        "description": "变体"
+      },
+      {
+        "path": "reward.items[].number",
+        "type": "Number",
+        "description": "产品数量"
+      },
+      {
+        "path": "reward.items[].questions",
+        "type": "Array",
+        "description": "产品的提问"
+      },
+      {
+        "path": "reward.questions",
+        "type": "Array",
+        "description": "Reward 的提问"
+      },
+      {
+        "path": "addons",
+        "type": "Array",
+        "description": "Add-on 信息"
+      },
+      {
+        "path": "addons[].id",
+        "type": "Number",
+        "description": "产品ID"
+      },
+      {
+        "path": "addons[].name",
+        "type": "String",
+        "description": "产品名"
+      },
+      {
+        "path": "addons[].sku",
+        "type": "String",
+        "description": "款名"
+      },
+      {
+        "path": "addons[].price",
+        "type": "String",
+        "description": "产品价格"
+      },
+      {
+        "path": "addons[].variant",
+        "type": "Array",
+        "description": "变体"
+      },
+      {
+        "path": "addons[].number",
+        "type": "Number",
+        "description": "产品数量"
+      },
+      {
+        "path": "addons[].questions",
+        "type": "Array",
+        "description": "产品的提问"
+      },
+      {
+        "path": "gifts",
+        "type": "Array",
+        "description": "礼物信息"
+      },
+      {
+        "path": "gifts[].id",
+        "type": "Number",
+        "description": "Gift ID"
+      },
+      {
+        "path": "gifts[].name",
+        "type": "String",
+        "description": "Gift 名"
+      },
+      {
+        "path": "gifts[].sku",
+        "type": "String",
+        "description": "款名"
+      },
+      {
+        "path": "gifts[].variant",
+        "type": "Array",
+        "description": "变体"
+      },
+      {
+        "path": "gifts[].number",
+        "type": "Number",
+        "description": "产品数量"
+      }
+    ]
+  },
+  "fetch": null,
+  "normalize": null,
+  "export": null,
+  "options": {
+    "format": "markdown",
+    "output": null,
+    "max_pages": 50,
+    "timeout": 30,
+    "dry_run": true,
+    "confirm_post": false
+  },
+  "next_steps": [
+    "extract_doc.py: extract text from PDF/Markdown/txt",
+    "parse_api_doc.py: parse interface blocks and request parameter tables",
+    "fetch_api.py: execute safe GET requests",
+    "normalize_data.py: flatten JSON response fields",
+    "export_data.py: export Markdown/CSV/JSON"
+  ],
+  "warnings": []
+}

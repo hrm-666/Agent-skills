@@ -1,0 +1,1003 @@
+{
+  "ok": true,
+  "stage": "file_export",
+  "message": "阶段六文件导出已运行：已将接口数据整理并写入目标文件。",
+  "doc": {
+    "path": "API-CN1.pdf",
+    "exists": true,
+    "suffix": ".pdf"
+  },
+  "extraction": {
+    "extractor": "pypdf",
+    "char_count": 2765,
+    "line_count": 127,
+    "candidate_urls_count": 3,
+    "text_preview": "获取订单信息\nGET https://api.pledgebox.com/api/openapi/orders\napi_token ***\nproject_id 必填  100001\npage 选填 分页，不填时默认 page = 1\nis_completed 选填  濄\npb_id 选填 获取指定订单详情\nemail 选填 获取指定邮箱的订单详情\norder_status 选填 获取指定订单状态的订单。\n可选参数：unlock/lock/shipped/refunded\n\n\n\n\n\n响应参数：\n名称 类型 描述\nid Number 订单 ID\npbid String PledgeBox ID\nks_id Number KS 的订单 ID\nsequence Number KS 的订单序号\norder_status String 订单状态\nsurvey_status String Survey 状态\ndate_confirmed String 完成 Survey 的时间\ncourier_name String 快递名字\nt...",
+    "warnings": [
+      "pymupdf_not_installed"
+    ]
+  },
+  "parse": {
+    "interfaces_count": 3,
+    "selected_index": 0,
+    "selected_title": "获取订单信息"
+  },
+  "request_plan": {
+    "method": "GET",
+    "title": "获取订单信息",
+    "endpoint_url": "https://api.pledgebox.com/api/openapi/orders",
+    "request_url": "https://api.pledgebox.com/api/openapi/orders?api_token=***&project_id=100001",
+    "query": {
+      "api_token": "***",
+      "project_id": "100001"
+    },
+    "query_param_paths": [
+      "api_token",
+      "project_id"
+    ],
+    "filled_required_params": [
+      "api_token",
+      "project_id"
+    ],
+    "filled_optional_params": [],
+    "fallback_filled_params": [],
+    "skipped_optional_params": [
+      "page",
+      "is_completed",
+      "pb_id",
+      "email",
+      "order_status"
+    ],
+    "missing_required_params": [],
+    "risk_level": "read_only",
+    "params": [
+      {
+        "path": "api_token",
+        "type": null,
+        "required": true,
+        "description": "",
+        "value": "***",
+        "value_source": "request_table",
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "project_id",
+        "type": null,
+        "required": true,
+        "description": "",
+        "value": "100001",
+        "value_source": "request_table",
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "page",
+        "type": null,
+        "required": false,
+        "description": "分页，不填时默认 page = 1",
+        "value": null,
+        "value_source": null,
+        "default_value": "1",
+        "enum_values": []
+      },
+      {
+        "path": "is_completed",
+        "type": null,
+        "required": false,
+        "description": "濄",
+        "value": null,
+        "value_source": null,
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "pb_id",
+        "type": null,
+        "required": false,
+        "description": "获取指定订单详情",
+        "value": null,
+        "value_source": null,
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "email",
+        "type": null,
+        "required": false,
+        "description": "获取指定邮箱的订单详情",
+        "value": null,
+        "value_source": null,
+        "default_value": null,
+        "enum_values": []
+      },
+      {
+        "path": "order_status",
+        "type": null,
+        "required": false,
+        "description": "获取指定订单状态的订单。 可选参数：unlock/lock/shipped/refunded",
+        "value": null,
+        "value_source": null,
+        "default_value": null,
+        "enum_values": [
+          "unlock",
+          "lock",
+          "shipped",
+          "refunded"
+        ]
+      }
+    ],
+    "response_fields": [
+      {
+        "path": "id",
+        "type": "Number",
+        "description": "订单 ID"
+      },
+      {
+        "path": "pbid",
+        "type": "String",
+        "description": "PledgeBox ID"
+      },
+      {
+        "path": "ks_id",
+        "type": "Number",
+        "description": "KS 的订单 ID"
+      },
+      {
+        "path": "sequence",
+        "type": "Number",
+        "description": "KS 的订单序号"
+      },
+      {
+        "path": "order_status",
+        "type": "String",
+        "description": "订单状态"
+      },
+      {
+        "path": "survey_status",
+        "type": "String",
+        "description": "Survey 状态"
+      },
+      {
+        "path": "date_confirmed",
+        "type": "String",
+        "description": "完成 Survey 的时间"
+      },
+      {
+        "path": "courier_name",
+        "type": "String",
+        "description": "快递名字"
+      },
+      {
+        "path": "tracking_code",
+        "type": "String",
+        "description": "快递追踪单号"
+      },
+      {
+        "path": "email",
+        "type": "String",
+        "description": "邮箱地址"
+      },
+      {
+        "path": "shipping_address",
+        "type": "Object",
+        "description": "收件人地址"
+      },
+      {
+        "path": "address",
+        "type": "String",
+        "description": "地址"
+      },
+      {
+        "path": "address2",
+        "type": "String",
+        "description": "地址 2"
+      },
+      {
+        "path": "city",
+        "type": "String",
+        "description": "城市"
+      },
+      {
+        "path": "state",
+        "type": "String",
+        "description": "州"
+      },
+      {
+        "path": "zip",
+        "type": "String",
+        "description": "邮政编码"
+      },
+      {
+        "path": "country",
+        "type": "String",
+        "description": "国家"
+      },
+      {
+        "path": "country_code",
+        "type": "String",
+        "description": "国家简码"
+      },
+      {
+        "path": "phone",
+        "type": "String",
+        "description": "电话号码"
+      },
+      {
+        "path": "name",
+        "type": "String",
+        "description": "名字"
+      },
+      {
+        "path": "paid_amount",
+        "type": "Number",
+        "description": "支付总金额，KS 支付金额与 PB 支付金额的和"
+      },
+      {
+        "path": "credit_offer",
+        "type": "String",
+        "description": "Creator 给订单的优惠金额"
+      },
+      {
+        "path": "balance",
+        "type": "String",
+        "description": "余款，为负时表示 backer 欠款"
+      },
+      {
+        "path": "reward",
+        "type": "Object",
+        "description": "Reward 信息"
+      },
+      {
+        "path": "id",
+        "type": "Number",
+        "description": "Reward ID"
+      },
+      {
+        "path": "name",
+        "type": "String",
+        "description": "Reward 名字"
+      },
+      {
+        "path": "price",
+        "type": "String",
+        "description": "Reward 价格"
+      },
+      {
+        "path": "items",
+        "type": "Array",
+        "description": "Reward 包含的产品"
+      },
+      {
+        "path": "id",
+        "type": "Number",
+        "description": "产品 ID"
+      },
+      {
+        "path": "name",
+        "type": "String",
+        "description": "产品名"
+      },
+      {
+        "path": "sku",
+        "type": "String",
+        "description": "款名"
+      },
+      {
+        "path": "variant",
+        "type": "Array",
+        "description": "变体"
+      },
+      {
+        "path": "number",
+        "type": "Number",
+        "description": "产品数量"
+      },
+      {
+        "path": "questions",
+        "type": "Array",
+        "description": "产品的提问"
+      },
+      {
+        "path": "questions",
+        "type": "Array",
+        "description": "Reward 的提问"
+      },
+      {
+        "path": "addons",
+        "type": "Array",
+        "description": "Add-on 信息"
+      },
+      {
+        "path": "id",
+        "type": "Number",
+        "description": "产品 ID"
+      },
+      {
+        "path": "name",
+        "type": "String",
+        "description": "产品名"
+      },
+      {
+        "path": "sku",
+        "type": "String",
+        "description": "款名"
+      },
+      {
+        "path": "price",
+        "type": "String",
+        "description": "产品价格"
+      },
+      {
+        "path": "variant",
+        "type": "Array",
+        "description": "变体"
+      },
+      {
+        "path": "number",
+        "type": "Number",
+        "description": "产品数量"
+      },
+      {
+        "path": "questions",
+        "type": "Array",
+        "description": "产品的提问"
+      },
+      {
+        "path": "gifts",
+        "type": "Array",
+        "description": "礼物信息"
+      },
+      {
+        "path": "id",
+        "type": "Number",
+        "description": "Gift ID"
+      },
+      {
+        "path": "name",
+        "type": "String",
+        "description": "Gift 名"
+      },
+      {
+        "path": "sku",
+        "type": "String",
+        "description": "款名"
+      },
+      {
+        "path": "variant",
+        "type": "Array",
+        "description": "变体"
+      },
+      {
+        "path": "number",
+        "type": "Number",
+        "description": "产品数量"
+      }
+    ]
+  },
+  "fetch": {
+    "attempted": true,
+    "ok": true,
+    "skipped_reason": null,
+    "status_code": 200,
+    "content_type": "application/json",
+    "byte_count": 28579,
+    "json_ok": true,
+    "response_shape": {
+      "root_type": "object",
+      "item_count": 20,
+      "top_level_keys": [
+        "data",
+        "total_count",
+        "code"
+      ],
+      "main_array_path": "data"
+    },
+    "raw_response_paths": [
+      "C:\\Users\\20779\\Desktop\\Task6_自动化2406_巴惟志\\Task6_自动化2406_巴惟志\\workspace\\api-doc-extractor\\raw\\api-response-20260507-233234.json"
+    ],
+    "error": null,
+    "warnings": []
+  },
+  "normalize": {
+    "ok": true,
+    "items_count": 20,
+    "main_array_path": "data",
+    "fields_used": [
+      "id",
+      "pbid",
+      "ks_id",
+      "sequence",
+      "order_status",
+      "survey_status",
+      "date_confirmed",
+      "courier_name",
+      "tracking_code",
+      "email",
+      "address",
+      "address2",
+      "city",
+      "state",
+      "zip",
+      "country",
+      "country_code",
+      "phone",
+      "name",
+      "paid_amount",
+      "credit_offer",
+      "balance",
+      "price",
+      "sku",
+      "number"
+    ],
+    "records_preview": [
+      {
+        "id": "1889113",
+        "pbid": "PBID001889113",
+        "ks_id": "143386267",
+        "sequence": "4686",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-10 13:54:27",
+        "courier_name": "",
+        "tracking_code": "TEST1",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "419",
+        "credit_offer": "0",
+        "balance": "-81.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891436",
+        "pbid": "PBID001891436",
+        "ks_id": "143385417",
+        "sequence": "4682",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-10 11:30:18",
+        "courier_name": "",
+        "tracking_code": "TEST2",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "279",
+        "credit_offer": "0",
+        "balance": "-75.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891437",
+        "pbid": "PBID001891437",
+        "ks_id": "143385686",
+        "sequence": "4683",
+        "order_status": "Unlock",
+        "survey_status": "Invited",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "249",
+        "credit_offer": "0",
+        "balance": "-65.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891438",
+        "pbid": "PBID001891438",
+        "ks_id": "143385752",
+        "sequence": "4684",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-31 10:42:23",
+        "courier_name": "",
+        "tracking_code": "YT65169651631651",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "229",
+        "credit_offer": "0",
+        "balance": "-55.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891439",
+        "pbid": "PBID001891439",
+        "ks_id": "143386210",
+        "sequence": "4685",
+        "order_status": "Unlock",
+        "survey_status": "Invited",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "269",
+        "credit_offer": "0",
+        "balance": "-75.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891440",
+        "pbid": "PBID001891440",
+        "ks_id": "143386661",
+        "sequence": "4687",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-11 07:01:06",
+        "courier_name": "",
+        "tracking_code": "YT2434021901005114",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "249",
+        "credit_offer": "0",
+        "balance": "-65.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891441",
+        "pbid": "PBID001891441",
+        "ks_id": "143386771",
+        "sequence": "4688",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-16 22:40:02",
+        "courier_name": "",
+        "tracking_code": "SF6047285809739",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "239",
+        "credit_offer": "0",
+        "balance": "-55.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891442",
+        "pbid": "PBID001891442",
+        "ks_id": "143386906",
+        "sequence": "4689",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-26 18:25:14",
+        "courier_name": "",
+        "tracking_code": "FS531444",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "229",
+        "credit_offer": "0",
+        "balance": "-55.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891443",
+        "pbid": "PBID001891443",
+        "ks_id": "143386996",
+        "sequence": "4690",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-10 13:40:09",
+        "courier_name": "",
+        "tracking_code": "GD545465",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "269",
+        "credit_offer": "0",
+        "balance": "-75.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891444",
+        "pbid": "PBID001891444",
+        "ks_id": "143387091",
+        "sequence": "4691",
+        "order_status": "Locked",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-10 12:14:54",
+        "courier_name": "",
+        "tracking_code": "12313123123132",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "279",
+        "credit_offer": "0",
+        "balance": "-75.8",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891446",
+        "pbid": "PBID001891446",
+        "ks_id": "143387227",
+        "sequence": "4693",
+        "order_status": "Unlock",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-10 13:31:23",
+        "courier_name": "",
+        "tracking_code": "YT2432121901002361",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "269",
+        "credit_offer": "0",
+        "balance": "-148.12",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "1891447",
+        "pbid": "PBID001891447",
+        "ks_id": "143387425",
+        "sequence": "4694",
+        "order_status": "Shipped",
+        "survey_status": "In Progress",
+        "date_confirmed": "2021-05-12 18:18:07",
+        "courier_name": "",
+        "tracking_code": "EDS8548541613",
+        "email": "demo@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "249",
+        "credit_offer": "0",
+        "balance": "-34.86",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3315409",
+        "pbid": "PBID003315409",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Unlock",
+        "survey_status": "In Progress",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "liyong@pledgebox.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "0",
+        "credit_offer": "0",
+        "balance": "-268",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3315432",
+        "pbid": "PBID003315432",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Unlock",
+        "survey_status": "In Progress",
+        "date_confirmed": "2026-01-07 23:08:20",
+        "courier_name": "",
+        "tracking_code": "9434611206204956865676",
+        "email": "demo@pledgebcx.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "179",
+        "credit_offer": "0",
+        "balance": "-10",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3315433",
+        "pbid": "PBID003315433",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Locked",
+        "survey_status": "Completed",
+        "date_confirmed": "2026-03-05 17:30:56",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "demo@pledgebpx.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "214",
+        "credit_offer": "0",
+        "balance": "0",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3354985",
+        "pbid": "PBID003354985",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Unlock",
+        "survey_status": "Not Invited",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "liyong@qq.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "0",
+        "credit_offer": "0",
+        "balance": "-50",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3354986",
+        "pbid": "PBID003354986",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Unlock",
+        "survey_status": "Not Invited",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "144913474@qq.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "0",
+        "credit_offer": "0",
+        "balance": "-70",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3383647",
+        "pbid": "PBID003383647",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Unlock",
+        "survey_status": "Not Invited",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "demo@pledgeboxj66666.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "0",
+        "credit_offer": "0",
+        "balance": "-238",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3387281",
+        "pbid": "PBID003387281",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Unlock",
+        "survey_status": "Not Invited",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "demo@pledgebox12323.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "0",
+        "credit_offer": "0",
+        "balance": "-50",
+        "price": "",
+        "sku": "",
+        "number": ""
+      },
+      {
+        "id": "3387572",
+        "pbid": "PBID003387572",
+        "ks_id": "",
+        "sequence": "",
+        "order_status": "Unlock",
+        "survey_status": "In Progress",
+        "date_confirmed": "",
+        "courier_name": "",
+        "tracking_code": "",
+        "email": "demo@pledgebox66.com",
+        "address": "",
+        "address2": "",
+        "city": "",
+        "state": "",
+        "zip": "",
+        "country": "",
+        "country_code": "",
+        "phone": "",
+        "name": "",
+        "paid_amount": "0",
+        "credit_offer": "0",
+        "balance": "-238",
+        "price": "",
+        "sku": "",
+        "number": ""
+      }
+    ],
+    "preview_count": 20,
+    "warnings": []
+  },
+  "export": {
+    "ok": true,
+    "format": "json",
+    "path": "C:\\Users\\20779\\Desktop\\Task6_自动化2406_巴惟志\\Task6_自动化2406_巴惟志\\workspace\\api-doc-extractor\\exports\\verification-output.json",
+    "record_count": 20,
+    "warnings": []
+  },
+  "options": {
+    "format": "json",
+    "output": "workspace\\api-doc-extractor\\exports\\verification-output.json",
+    "max_pages": 50,
+    "timeout": 30,
+    "dry_run": false,
+    "confirm_post": false
+  },
+  "next_steps": [
+    "extract_doc.py: extract text from PDF/Markdown/txt",
+    "parse_api_doc.py: parse interface blocks and request parameter tables",
+    "fetch_api.py: execute safe GET requests",
+    "normalize_data.py: flatten JSON response fields",
+    "export_data.py: export Markdown/CSV/JSON"
+  ],
+  "warnings": [
+    "pymupdf_not_installed"
+  ]
+}
