@@ -244,7 +244,7 @@
       const row = document.createElement('div');
       row.id = id;
       row.className = 'flex justify-start items-end gap-2';
-      messageStates.set(id, { reply: '', steps: [], confirmation: null, confirmationResult: null, error: null });
+      messageStates.set(id, { reply: '', steps: [], confirmation: null, confirmationResult: null, error: null, progress: null });
       row.innerHTML = `
         <div style="width:26px;height:26px;border-radius:50%;background:#3b7dd8;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:#fff;margin-bottom:2px;">A</div>
         <div class="msg-agent max-w-2xl" style="padding:7px 13px;">
@@ -254,7 +254,7 @@
       scrollToBottom();
     }
 
-    function updateAgentMessage(id, reply, steps, error, confirmation, confirmationResult) {
+    function updateAgentMessage(id, reply, steps, error, confirmation, confirmationResult, progress) {
       const row = document.getElementById(id);
       if (!row) return;
 
@@ -264,6 +264,7 @@
         confirmation: null,
         confirmationResult: null,
         error: null,
+        progress: null,
       };
       const next = {
         reply: reply !== undefined ? (reply || '') : previous.reply,
@@ -271,6 +272,7 @@
         error: error !== undefined ? error : previous.error,
         confirmation: confirmation !== undefined ? confirmation : previous.confirmation,
         confirmationResult: confirmationResult !== undefined ? confirmationResult : previous.confirmationResult,
+        progress: progress !== undefined ? progress : previous.progress,
       };
       if (next.confirmationResult) {
         next.confirmation = null;
@@ -288,6 +290,17 @@
       }
 
       let html = '';
+
+      if (next.progress) {
+        const p = next.progress;
+        html += `
+          <div class="mb-3 rounded-lg border px-3 py-3 text-xs" style="border-color:#bfdbfe;background:#f8fbff;color:#1d4ed8;">
+            <div style="font-weight:600;">处理进度</div>
+            <div class="mt-1">${escapeHtml(p.message || '处理中')}</div>
+            <div class="mt-1">已处理 ${escapeHtml(String(p.processed ?? 0))} / ${escapeHtml(String(p.total ?? 0))}，成功 ${escapeHtml(String(p.cleaned ?? 0))}，失败 ${escapeHtml(String(p.errors ?? 0))}</div>
+            ${p.current_pbid ? `<div class="mt-1 font-mono" style="word-break:break-all;">当前订单: ${escapeHtml(p.current_pbid)}</div>` : ''}
+          </div>`;
+      }
 
       if (next.steps && next.steps.length) {
         html += '<div class="space-y-1 mb-3">';
@@ -456,6 +469,8 @@
 
           if (event.event === 'agent_start') {
             updateAgentMessage(agentMsgId, '已连接，等待模型决策…', steps, null);
+          } else if (event.event === 'progress_update') {
+            updateAgentMessage(agentMsgId, reply || '执行中…', steps, null, null, null, event.data);
           } else if (event.event === 'tool_result') {
             steps.push(event.data);
             updateAgentMessage(agentMsgId, reply || '执行中…', steps, null, null, null);

@@ -26,6 +26,9 @@ def create_agent(provider_override: str | None = None) -> Agent:
     api_key = os.getenv(provider_config["env_key"])
     if not api_key:
         raise RuntimeError(f"缺少环境变量: {provider_config['env_key']}")
+    selected_model = config.get("providers", {}).get(provider, {}).get("model") or provider_config["default_model"]
+    os.environ["MINI_AGENT_ACTIVE_PROVIDER"] = provider
+    os.environ["MINI_AGENT_ACTIVE_MODEL"] = selected_model
 
     skill_loader = SkillLoader(Path(config.get("skills", {}).get("dir", "./skills")), config.get("skills", {}).get("enabled"))
     skill_loader.scan()
@@ -75,7 +78,7 @@ def create_agent(provider_override: str | None = None) -> Agent:
         build_activate_skill(skill_loader),
     )
 
-    llm = LLM(provider=provider, api_key=api_key, model=config.get("providers", {}).get(provider, {}).get("model"))
+    llm = LLM(provider=provider, api_key=api_key, model=selected_model)
     return Agent(
         llm=llm,
         skill_loader=skill_loader,

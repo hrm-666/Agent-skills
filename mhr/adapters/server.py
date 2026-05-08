@@ -6,6 +6,7 @@ import logging
 import queue
 import shutil
 import threading
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -120,6 +121,8 @@ def build_app() -> FastAPI:
 
         def event_stream():
             events: queue.Queue[tuple[str, dict] | None] = queue.Queue()
+            run_done = threading.Event()
+            progress_path = Path("workspace") / "pledgebox-order-output" / "progress.json"
 
             def run_agent():
                 steps: list[dict] = []
@@ -150,9 +153,24 @@ def build_app() -> FastAPI:
                     logger.exception("chat stream failed provider=%s", payload.provider)
                     events.put(("agent_error", {"error": str(exc)}))
                 finally:
+                    run_done.set()
                     events.put(None)
 
+            def watch_progress():
+                last_text = None
+                while not run_done.is_set():
+                    try:
+                        if progress_path.exists():
+                            text = progress_path.read_text(encoding="utf-8")
+                            if text and text != last_text:
+                                last_text = text
+                                events.put(("progress_update", json.loads(text)))
+                    except Exception:
+                        logger.exception("progress watcher failed")
+                    time.sleep(0.5)
+
             threading.Thread(target=run_agent, daemon=True).start()
+            threading.Thread(target=watch_progress, daemon=True).start()
 
             while True:
                 item = events.get()

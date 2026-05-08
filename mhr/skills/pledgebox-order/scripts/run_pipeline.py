@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from clean_orders import clean_orders
+from clean_orders import LLMOrderCleaner, build_diff_log
 from fetch_orders import VALID_ORDER_STATUS, fetch_orders
 
 
@@ -19,6 +19,11 @@ def ensure_output_dir(output_dir: str) -> Path:
 def save_json(data: Any, path: Path) -> None:
     """将数据保存为 JSON。"""
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def save_progress(progress: dict[str, Any], output_dir: Path) -> None:
+    """保存当前进度，供网页端轮询展示。"""
+    save_json(progress, output_dir / "progress.json")
 
 
 def extract_order_list(raw_response: Any) -> list[Any]:
@@ -123,6 +128,21 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     output_dir = ensure_output_dir(args.output_dir)
+    raw_output_path = output_dir / "raw_orders.json"
+    cleaned_output_path = output_dir / "cleaned_orders.json"
+    error_output_path = output_dir / "error_log.json"
+
+    save_progress(
+        {
+            "stage": "fetching_raw",
+            "message": "正在拉取原始订单数据",
+            "processed": 0,
+            "total": 0,
+            "cleaned": 0,
+            "errors": 0,
+        },
+        output_dir,
+    )
 
     should_fetch_all_pages = args.all_pages and not args.pb_id and not args.email
     if should_fetch_all_pages:
@@ -146,17 +166,80 @@ def main() -> int:
             email=args.email,
         )
 
-    raw_output_path = output_dir / "raw_orders.json"
-    cleaned_output_path = output_dir / "cleaned_orders.json"
-    error_output_path = output_dir / "error_log.json"
-
     save_json(raw_response, raw_output_path)
 
     raw_orders = extract_order_list(raw_response)
-    cleaned_orders, errors = clean_orders(raw_orders)
+    total_orders = len(raw_orders)
+    save_progress(
+        {
+            "stage": "raw_saved",
+            "message": "原始订单已保存，开始逐条清洗",
+            "processed": 0,
+            "total": total_orders,
+            "cleaned": 0,
+            "errors": 0,
+            "raw_output_path": str(raw_output_path),
+        },
+        output_dir,
+    )
+
+    cleaned_orders: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    cleaner = LLMOrderCleaner()
 
     save_json(cleaned_orders, cleaned_output_path)
     save_json(errors, error_output_path)
+
+    for index, raw_order in enumerate(raw_orders, start=1):
+        pbid = raw_order.get("pbid") if isinstance(raw_order, dict) else None
+        try:
+            cleaned_order = cleaner.clean_order(raw_order)
+            cleaned_orders.append(cleaned_order)
+            errors.append(build_diff_log(raw_order, cleaned_order))
+            progress_message = f"正在清洗第 {index}/{total_orders} 条订单"
+        except Exception as exc:
+            errors.append(
+                {
+                    "pbid": pbid,
+                    "error": str(exc),
+                    "raw_order": raw_order,
+                }
+            )
+            progress_message = f"第 {index}/{total_orders} 条订单清洗失败"
+
+        save_json(cleaned_orders, cleaned_output_path)
+        save_json(errors, error_output_path)
+        save_progress(
+            {
+                "stage": "cleaning",
+                "message": progress_message,
+                "processed": index,
+                "total": total_orders,
+                "cleaned": len(cleaned_orders),
+                "errors": sum(1 for item in errors if "error" in item),
+                "current_pbid": pbid,
+                "raw_output_path": str(raw_output_path),
+                "cleaned_output_path": str(cleaned_output_path),
+                "error_output_path": str(error_output_path),
+            },
+            output_dir,
+        )
+        print(f"[PROGRESS] {progress_message} cleaned={len(cleaned_orders)} errors={sum(1 for item in errors if 'error' in item)}")
+
+    save_progress(
+        {
+            "stage": "completed",
+            "message": "全部订单处理完成",
+            "processed": total_orders,
+            "total": total_orders,
+            "cleaned": len(cleaned_orders),
+            "errors": sum(1 for item in errors if "error" in item),
+            "raw_output_path": str(raw_output_path),
+            "cleaned_output_path": str(cleaned_output_path),
+            "error_output_path": str(error_output_path),
+        },
+        output_dir,
+    )
 
     print("[DONE] PledgeBox order pipeline finished.")
     print(f"Raw data saved to: {raw_output_path}")
@@ -167,7 +250,7 @@ def main() -> int:
         print(f"Fetched count: {raw_response.get('fetched_count', len(raw_orders))}")
     print(f"Total raw orders: {len(raw_orders)}")
     print(f"Total cleaned orders: {len(cleaned_orders)}")
-    print(f"Total errors: {len(errors)}")
+    print(f"Total errors: {sum(1 for item in errors if 'error' in item)}")
     return 0
 
 
