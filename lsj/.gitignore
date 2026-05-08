@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Env
+.env
+
+# Runtime data
+logs/*
+!logs/.gitkeep
+uploads/*
+!uploads/.gitkeep
+workspace/*
+!workspace/.gitkeep
+
+# SQLite sample
+data/sample.db
+
+# VS Code
+.vscode/

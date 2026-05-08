@@ -1,0 +1,21 @@
+active_provider: openrouter
+
+providers:
+  openrouter:
+    model: moonshotai/kimi-k2.5
+  deepseek:
+    model: deepseek-chat
+
+skills:
+  dir: ./skills
+  enabled: null
+
+agent:
+  max_iterations: 15
+
+webui:
+  host: 127.0.0.1
+  port: 8000
+
+logging:
+  level: INFO
