@@ -1,7 +1,21 @@
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.log
+.DS_Store
+
 .env
-uploads/*
-!uploads/.gitkeep
-logs/*
-!logs/.gitkeep
+**/.env
+
+.vscode/
+**/.vscode/
+
+
+mhr/uploads/*
+!mhr/uploads/.gitkeep
+mhr/logs/*
+!mhr/logs/.gitkeep
+
+# Ignore nested repo metadata and local reference artifacts in mhr
+mhr/references/**/.git/
+mhr/references/**/.DS_Store
