@@ -28,6 +28,7 @@ class Agent:
         user_text: str,
         image_paths: Optional[list[str]] = None,
         on_step: Optional[Callable] = None,  # 每轮 loop 的回调,WebUI 用
+        on_text_delta: Optional[Callable[[str], None]] = None,
     ) -> str:
         """
         执行一次完整的 agent loop。
@@ -53,7 +54,7 @@ class Agent:
 
         for iteration in range(1, self.max_iterations + 1):
             logger.info("agent iteration=%s llm_call messages=%s", iteration, len(messages))
-            message = self.llm.complete(system, messages, tools)
+            message = self._complete(system, messages, tools, on_text_delta)
             tool_calls = getattr(message, "tool_calls", None)
 
             if tool_calls:
@@ -98,6 +99,26 @@ class Agent:
         
         logger.info("agent max_iterations reached max=%s last_progress_len=%s", self.max_iterations, len(last_progress))
         return f"[error] Agent failed to complete task within {self.max_iterations} iterations. Last progress: {last_progress}"
+
+    def _complete(
+        self,
+        system: str,
+        messages: list,
+        tools: list,
+        on_text_delta: Optional[Callable[[str], None]] = None,
+    ):
+        if not on_text_delta:
+            return self.llm.complete(system, messages, tools)
+
+        try:
+            stream = self.llm.stream_complete(system, messages, tools)
+            return self.llm.collect_stream(stream, on_text_delta)
+        except Exception:
+            logger.exception("llm streaming failed, fallback to non-streaming")
+            message = self.llm.complete(system, messages, tools)
+            if message.content and on_text_delta:
+                on_text_delta(message.content)
+            return message
 
     def _build_system_prompt(self) -> str:
         skill_catalog = self.skill_loader.get_catalog_text()

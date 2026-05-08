@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
 import logging
+import queue
 import shutil
+import threading
 from pathlib import Path
 from uuid import uuid4
 
@@ -10,7 +13,7 @@ import uvicorn
 import yaml
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -18,6 +21,10 @@ from adapters.cli import create_agent
 from core.llm import PROVIDERS
 
 logger = logging.getLogger(__name__)
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
 class ChatRequest(BaseModel):
@@ -34,7 +41,9 @@ def build_app() -> FastAPI:
 
     @app.get("/")
     def index():
-        return FileResponse(Path("webui") / "index.html")
+        response = FileResponse(Path("webui") / "index.html")
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.get("/api/providers")
     def providers():
@@ -67,6 +76,63 @@ def build_app() -> FastAPI:
         reply = agent.run(text, payload.image_paths, steps.append)
         logger.info("chat response provider=%s steps=%s reply_len=%s", payload.provider, len(steps), len(reply))
         return {"reply": reply, "steps": steps}
+
+    @app.post("/api/chat/stream")
+    def chat_stream(payload: ChatRequest):
+        text = payload.text.strip()
+        if not text and payload.image_paths:
+            files = "\n".join(f"- {path}" for path in payload.image_paths)
+            text = f"用户上传了以下文件，请根据这些文件和可用技能处理：\n{files}"
+        if not text:
+            raise HTTPException(status_code=400, detail="消息内容不能为空")
+
+        logger.info(
+            "chat stream request provider=%s text_len=%s files=%s",
+            payload.provider,
+            len(text),
+            len(payload.image_paths),
+        )
+
+        def event_stream():
+            events: queue.Queue[tuple[str, dict] | None] = queue.Queue()
+
+            def run_agent():
+                steps: list[dict] = []
+                try:
+                    agent = create_agent(payload.provider)
+                    events.put(("agent_start", {"provider": payload.provider, "text": text}))
+
+                    def on_step(step: dict) -> None:
+                        steps.append(step)
+                        events.put(("tool_result", step))
+
+                    def on_text_delta(delta: str) -> None:
+                        events.put(("assistant_delta", {"text": delta}))
+
+                    reply = agent.run(text, payload.image_paths, on_step, on_text_delta)
+                    logger.info(
+                        "chat stream response provider=%s steps=%s reply_len=%s",
+                        payload.provider,
+                        len(steps),
+                        len(reply),
+                    )
+                    events.put(("agent_done", {"reply": reply, "steps_count": len(steps)}))
+                except Exception as exc:
+                    logger.exception("chat stream failed provider=%s", payload.provider)
+                    events.put(("agent_error", {"error": str(exc)}))
+                finally:
+                    events.put(None)
+
+            threading.Thread(target=run_agent, daemon=True).start()
+
+            while True:
+                item = events.get()
+                if item is None:
+                    break
+                event, data = item
+                yield _sse(event, data)
+
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
 
     @app.post("/api/upload")
     def upload(file: UploadFile = File(...)):
