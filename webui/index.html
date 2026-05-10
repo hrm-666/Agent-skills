@@ -12,56 +12,40 @@
     <!-- Top Bar -->
     <header class="flex items-center justify-between border-b border-neutral-200 pb-4 shrink-0">
       <h1 class="text-base font-semibold tracking-tight">Mini Agent</h1>
-
-      <div class="flex items-center gap-2 text-sm">
-        <span class="text-neutral-500">Model:</span>
-        <select
-          id="provider"
-          class="border border-neutral-300 rounded-md px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600"
-        ></select>
+      <div class="flex items-center gap-4 text-sm">
+        <button id="newChatBtn" class="text-neutral-500 hover:text-neutral-700">新对话</button>
+        <select id="provider" class="border border-neutral-300 rounded-md px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600"></select>
       </div>
     </header>
 
     <!-- Chat Area -->
-    <main
-      id="chat"
-      class="flex-1 overflow-y-auto py-6 space-y-4 min-h-0"
-    ></main>
+    <main id="chat" class="flex-1 overflow-y-auto py-6 space-y-4 min-h-0"></main>
 
     <!-- Input Area -->
     <footer class="border-t border-neutral-200 pt-4 shrink-0">
-      <div
-        id="dropZone"
-        class="border border-neutral-300 rounded-xl bg-white px-3 py-3"
-      >
+      <div class="border border-neutral-300 rounded-xl bg-white px-3 py-3">
         <div id="filePreview" class="mb-3 flex flex-wrap gap-2"></div>
-
         <div class="flex items-end gap-3">
-          <button
-            id="uploadBtn"
-            class="px-3 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-100"
-          >
-            📎
-          </button>
-
-          <textarea
-            id="input"
-            rows="2"
-            placeholder="输入内容..."
-            class="flex-1 resize-none border border-neutral-300 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600"
-          ></textarea>
-
-          <button
-            id="sendBtn"
-            class="px-5 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-          >
-            发送
-          </button>
+          <button id="uploadBtn" class="px-3 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-100">📎</button>
+          <textarea id="input" rows="2" placeholder="输入内容..." class="flex-1 resize-none border border-neutral-300 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600"></textarea>
+          <button id="sendBtn" class="px-5 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">发送</button>
         </div>
       </div>
-
       <input type="file" id="fileInput" multiple class="hidden">
     </footer>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div class="bg-white rounded-2xl border border-neutral-300 p-6 max-w-md mx-4 shadow-xl">
+        <h3 class="font-semibold mb-2">确认操作</h3>
+        <p id="confirmReason" class="text-sm text-neutral-600 mb-1"></p>
+        <p id="confirmCommand" class="text-xs font-mono text-neutral-500 bg-neutral-100 rounded p-2 mb-4"></p>
+        <div class="flex justify-end gap-3">
+          <button id="confirmDeny" class="px-4 py-2 border border-neutral-300 rounded-lg hover:bg-neutral-100">取消</button>
+          <button id="confirmApprove" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">确认执行</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -72,63 +56,104 @@
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('fileInput');
     const filePreview = document.getElementById('filePreview');
-    const dropZone = document.getElementById('dropZone');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmReason = document.getElementById('confirmReason');
+    const confirmCommand = document.getElementById('confirmCommand');
+    const confirmApprove = document.getElementById('confirmApprove');
+    const confirmDeny = document.getElementById('confirmDeny');
 
-    let uploadedPaths = [];
+    let uploadedFiles = [];
+    let pendingConfirmId = null;
+    let sessionId = sessionStorage.getItem('session_id') || crypto.randomUUID();
+    sessionStorage.setItem('session_id', sessionId);
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    function esc(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
     }
 
-    function addMessage(role, content, files = []) {
+    let currentAgentBubble = null;
+
+    function ensureAgentBubble() {
+      if (currentAgentBubble) return currentAgentBubble;
       const wrapper = document.createElement('div');
-      wrapper.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
-
+      wrapper.className = 'flex justify-start';
       const bubble = document.createElement('div');
-      bubble.className = `max-w-[80%] rounded-2xl border px-4 py-3 bg-white ${
-        role === 'user'
-          ? 'border-neutral-300'
-          : 'border-neutral-200'
-      }`;
+      bubble.className = 'max-w-[80%] rounded-2xl border border-neutral-200 px-4 py-3 bg-white';
+      bubble.innerHTML = `<div class="text-xs font-medium mb-2 text-indigo-600">Agent</div><div class="text-sm whitespace-pre-wrap leading-6" id="agentContent"></div>`;
+      wrapper.appendChild(bubble);
+      chatDiv.appendChild(wrapper);
+      currentAgentBubble = bubble;
+      return bubble;
+    }
 
-      let html = `<div class="text-xs font-medium mb-2 ${role === 'user' ? 'text-neutral-500' : 'text-indigo-600'}">${role === 'user' ? 'User' : 'Agent'}</div>`;
+    function finalizeAgentBubble() {
+      currentAgentBubble = null;
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
 
-      if (files.length) {
-        html += `<div class="text-xs text-neutral-500 mb-2">${files.map(f => `📄 ${escapeHtml(f)}`).join('<br>')}</div>`;
-      }
-
-      html += `<div class="text-sm whitespace-pre-wrap leading-6">${escapeHtml(content)}</div>`;
-
+    function addUserMsg(text, files) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex justify-end';
+      const bubble = document.createElement('div');
+      bubble.className = 'max-w-[80%] rounded-2xl border border-neutral-300 px-4 py-3 bg-white';
+      let html = `<div class="text-xs font-medium mb-2 text-neutral-500">User</div>`;
+      if (files.length) html += `<div class="text-xs text-neutral-500 mb-2">${files.map(f => `📄 ${esc(f)}`).join('<br>')}</div>`;
+      html += `<div class="text-sm whitespace-pre-wrap leading-6">${esc(text)}</div>`;
       bubble.innerHTML = html;
       wrapper.appendChild(bubble);
       chatDiv.appendChild(wrapper);
       chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
-    function addToolCall(name, args, result = null, isError = false) {
+    function addToolStep(name, args, result) {
       const row = document.createElement('details');
       row.className = 'text-sm border border-neutral-200 rounded-lg bg-white px-4 py-3';
-
+      const isErr = result && result.error && result.error.type !== 'ConfirmationRequired';
       const summary = document.createElement('summary');
-      summary.className = `cursor-pointer ${isError ? 'text-red-600' : 'text-neutral-700'}`;
+      summary.className = `cursor-pointer ${isErr ? 'text-red-600' : 'text-neutral-700'}`;
       summary.textContent = `🔧 ${name}`;
       row.appendChild(summary);
-
       const detail = document.createElement('div');
       detail.className = 'mt-2 text-xs text-neutral-500 whitespace-pre-wrap font-mono';
       detail.textContent = JSON.stringify({ args, result }, null, 2);
       row.appendChild(detail);
-
       chatDiv.appendChild(row);
       chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
+    function showConfirm(step) {
+      const conf = (step.result && step.result.meta && step.result.meta.confirmation) || {};
+      pendingConfirmId = conf.id;
+      confirmReason.textContent = conf.reason || '该操作需要确认';
+      confirmCommand.textContent = `${conf.tool_name || step.name} ${JSON.stringify(conf.args || step.args)}`;
+      confirmModal.classList.remove('hidden');
+    }
+
+    confirmApprove.onclick = async () => {
+      confirmModal.classList.add('hidden');
+      if (!pendingConfirmId) return;
+      const res = await fetch('/api/tool/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation_id: pendingConfirmId }),
+      });
+      const data = await res.json();
+      addToolStep(data.step.name, data.step.args, data.step.result);
+      pendingConfirmId = null;
+    };
+
+    confirmDeny.onclick = () => {
+      confirmModal.classList.add('hidden');
+      pendingConfirmId = null;
+    };
+
     function renderFiles() {
-      filePreview.innerHTML = uploadedPaths.map(path => {
-        const name = path.split('/').pop();
-        return `<div class="text-xs border border-neutral-300 rounded-md px-2 py-1 bg-neutral-50">${escapeHtml(name)}</div>`;
+      filePreview.innerHTML = uploadedFiles.map(f => {
+        const name = (f.name || f.path || '').split('/').pop();
+        return `<div class="text-xs border border-neutral-300 rounded-md px-2 py-1 bg-neutral-50">${esc(name)}</div>`;
       }).join('');
     }
 
@@ -136,19 +161,13 @@
       const saved = localStorage.getItem('selected_provider');
       const res = await fetch('/api/providers');
       const items = await res.json();
-
-      providerSelect.innerHTML = items.map(item => `
-        <option value="${item.name}" ${!item.configured ? 'disabled' : ''}>
-          ${item.name}${item.configured ? '' : ' (无密钥)'}
-        </option>
-      `).join('');
-
+      providerSelect.innerHTML = items.map(i =>
+        `<option value="${i.name}" ${!i.configured ? 'disabled' : ''}>${i.name}${i.configured ? '' : ' (无密钥)'}</option>`
+      ).join('');
       if (saved) providerSelect.value = saved;
     }
 
-    providerSelect.onchange = () => {
-      localStorage.setItem('selected_provider', providerSelect.value);
-    };
+    providerSelect.onchange = () => localStorage.setItem('selected_provider', providerSelect.value);
 
     uploadBtn.onclick = () => fileInput.click();
 
@@ -156,87 +175,101 @@
       for (const file of fileInput.files) {
         const form = new FormData();
         form.append('file', file);
-
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: form
-        });
-
-        const data = await res.json();
-        uploadedPaths.push(data.path);
+        const res = await fetch('/api/upload', { method: 'POST', body: form });
+        uploadedFiles.push(await res.json());
       }
-
       renderFiles();
       fileInput.value = '';
     };
 
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-    });
-
-    dropZone.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      for (const file of e.dataTransfer.files) {
-        const form = new FormData();
-        form.append('file', file);
-
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: form
-        });
-
-        const data = await res.json();
-        uploadedPaths.push(data.path);
-      }
+    newChatBtn.onclick = async () => {
+      await fetch('/api/session/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      chatDiv.innerHTML = '';
+      currentAgentBubble = null;
+      uploadedFiles = [];
       renderFiles();
-    });
+    };
 
     async function send() {
       const text = input.value.trim();
-      if (!text && !uploadedPaths.length) return;
+      if (!text && !uploadedFiles.length) return;
 
-      const fileNames = uploadedPaths.map(p => p.split('/').pop());
-      addMessage('user', text, fileNames);
+      const fileNames = uploadedFiles.map(f => f.name || f.path || '');
+      addUserMsg(text, fileNames);
 
-      const paths = [...uploadedPaths];
-      uploadedPaths = [];
+      const filesForReq = [...uploadedFiles];
+      uploadedFiles = [];
       renderFiles();
       input.value = '';
 
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text,
-          image_paths: paths,
-          provider: providerSelect.value
-        })
+          image_paths: filesForReq.map(f => f.path),
+          provider: providerSelect.value,
+          session_id: sessionId,
+        }),
       });
 
-      const data = await res.json();
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let currentEvent = '';
 
-      (data.steps || []).forEach(step => {
-        if (step.type === 'tool_call') {
-          addToolCall(step.name, step.args);
-        }
-        if (step.type === 'tool_result') {
-          addToolCall(step.name, {}, step.result);
-        }
-        if (step.type === 'error') {
-          addToolCall('Error', {}, step.message, true);
-        }
-      });
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-      addMessage('agent', data.reply || '');
+        for (const line of lines) {
+          // Track event type from "event: ..." lines
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+            continue;
+          }
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            switch (currentEvent) {
+              case 'assistant_delta':
+                const bubble = ensureAgentBubble();
+                const contentEl = bubble.querySelector('#agentContent');
+                contentEl.textContent += data.text;
+                chatDiv.scrollTop = chatDiv.scrollHeight;
+                break;
+              case 'tool_result':
+                addToolStep(data.name, data.args, data.result);
+                break;
+              case 'confirmation_required':
+                addToolStep(data.name, data.args, data.result);
+                showConfirm(data);
+                break;
+              case 'agent_done':
+                finalizeAgentBubble();
+                break;
+              case 'agent_error':
+                const eb = ensureAgentBubble();
+                eb.querySelector('#agentContent').textContent += `\n[错误: ${esc(data.error)}]`;
+                finalizeAgentBubble();
+                break;
+            }
+          } catch (e) { /* ignore parse errors */ }
+        }
+      }
+      finalizeAgentBubble();
     }
 
     sendBtn.onclick = send;
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        send();
-      }
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
     });
 
     loadProviders();

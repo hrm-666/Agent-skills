@@ -1,25 +1,32 @@
-from __future__ import annotations
-
-import os
-from pathlib import Path
+"""
+CLI 适配器：单次执行 + 交互式 REPL
+"""
 import logging
+import os
+import sys
+from pathlib import Path
+from typing import Optional
+
 import yaml
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 from core.agent import Agent
 from core.llm import LLM, PROVIDERS
 from core.skills import SkillLoader
-from core.tools import ToolRegistry
-from tools_builtin.file_ops import read, write
-from tools_builtin.shell import bash
+from core.tools import ToolRegistry, ToolPolicy
+from tools_builtin.file_ops import register as register_file_ops
+from tools_builtin.shell import register as register_shell
 from tools_builtin.skill_ops import build_activate_skill
-from core.logger import setup_logging
+from core.logging_setup import setup_logging
 
 logger = logging.getLogger(__name__)
+console = Console()
 
 
-def create_agent(provider_override: str | None = None) -> Agent:
-    # 确保日志已初始化（幂等）
+def create_agent(provider_override: Optional[str] = None) -> Agent:
     setup_logging()
     load_dotenv()
     with Path("config.yaml").open("r", encoding="utf-8") as file:
@@ -31,46 +38,21 @@ def create_agent(provider_override: str | None = None) -> Agent:
     if not api_key:
         raise RuntimeError(f"缺少环境变量: {provider_config['env_key']}")
 
-    skill_loader = SkillLoader(Path(config.get("skills", {}).get("dir", "./skills")), config.get("skills", {}).get("enabled"))
+    skill_loader = SkillLoader(
+        Path(config.get("skills", {}).get("dir", "./skills")),
+        config.get("skills", {}).get("enabled"),
+    )
     skill_loader.scan()
 
-    tool_registry = ToolRegistry()
-    tool_registry.register(
-        "read",
-        "Read the content of a text file. Returns up to 10,000 characters.",
-        {
-            "type": "object",
-            "properties": {"path": {"type": "string", "description": "File path (relative or absolute)"}},
-            "required": ["path"],
-        },
-        read,
-    )
-    tool_registry.register(
-        "write",
-        "Write text content to a file. Creates parent directories if needed. Overwrites existing file.",
-        {
-            "type": "object",
-            "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
-            "required": ["path", "content"],
-        },
-        write,
-    )
-    tool_registry.register(
-        "bash",
-        "Execute a shell command. Use this to run skill scripts, curl APIs, install packages, or any command-line operation. Returns stdout+stderr, truncated to 10,000 chars.",
-        {
-            "type": "object",
-            "properties": {
-                "command": {"type": "string"},
-                "timeout": {"type": "integer", "default": 60, "description": "Seconds"},
-            },
-            "required": ["command"],
-        },
-        bash,
-    )
-    tool_registry.register(
+    workspace_dir = config.get("workspace", {}).get("dir", "./workspace")
+
+    tool_policy = ToolPolicy(config.get("tool_policy", {}))
+    registry = ToolRegistry(policy=tool_policy)
+    register_file_ops(registry, workspace_dir=workspace_dir)
+    register_shell(registry)
+    registry.register(
         "activate_skill",
-        "Load the full instructions of a specific skill. Use this BEFORE running any skill-related command. The returned text is the skill's complete SKILL.md body.",
+        "Load the full instructions of a specific skill. Use this BEFORE running any skill-related command.",
         {
             "type": "object",
             "properties": {"name": {"type": "string", "description": "Exact skill name from the catalog"}},
@@ -79,28 +61,55 @@ def create_agent(provider_override: str | None = None) -> Agent:
         build_activate_skill(skill_loader),
     )
 
-    llm = LLM(provider=provider, api_key=api_key, model=config.get("providers", {}).get(provider, {}).get("model"))
+    llm = LLM(
+        provider=provider,
+        api_key=api_key,
+        model=config.get("providers", {}).get(provider, {}).get("model"),
+    )
     return Agent(
         llm=llm,
         skill_loader=skill_loader,
-        tool_registry=tool_registry,
+        tool_registry=registry,
         max_iterations=config.get("agent", {}).get("max_iterations", 15),
     )
 
 
+def print_step(step: dict) -> None:
+    args_summary = str(step.get("args", ""))[:80]
+    console.print(f"  [yellow]🔧 {step['name']}({args_summary})[/yellow]")
+
+
 def run_cli(message: str) -> str:
     logger.info(f"CLI 请求: {message[:200]}")
-    return create_agent().run(message)
+    agent = create_agent()
+    reply, steps = agent.run(message, on_step=print_step)
+    console.print()
+    console.print(Panel(Markdown(reply), title="[bold green]Agent 回复[/bold green]", border_style="green"))
+    return reply
 
 
 def run_interactive() -> None:
     agent = create_agent()
-    print("进入交互模式，输入 exit 退出。")
+    console.print(Panel(
+        "[bold]czon Agent — 交互模式[/bold]\n输入消息后按 Enter 发送，输入 [cyan]exit[/cyan] 或 [cyan]quit[/cyan] 退出",
+        border_style="blue",
+    ))
     while True:
-        text = input("你> ").strip()
-        if text.lower() in {"exit", "quit"}:
-            return
+        try:
+            text = console.input("[bold cyan]>>> [/bold cyan]").strip()
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]已退出[/dim]")
+            break
         if not text:
             continue
-        logger.info(f"CLI 交互消息: {text[:200]}")
-        print(agent.run(text))
+        if text.lower() in ("exit", "quit", "q"):
+            console.print("[dim]再见！[/dim]")
+            break
+        try:
+            reply, _ = agent.run(text, on_step=print_step)
+            console.print()
+            console.print(Panel(Markdown(reply), title="[bold green]Agent[/bold green]", border_style="green"))
+            console.print()
+        except Exception as e:
+            logger.error(f"执行出错：{e}", exc_info=True)
+            console.print(f"[bold red]错误：{e}[/bold red]\n")

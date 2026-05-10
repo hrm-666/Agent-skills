@@ -1,51 +1,68 @@
-from __future__ import annotations
-
-from pathlib import Path
+"""
+内置工具：read / write（文件读写）
+"""
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
-MAX_CHARS = 10000
-ALLOWED_WRITE_DIRS = ("workspace", "uploads", "logs")
+_MAX_CHARS = 10_000
 
 
-def read(path: str) -> str:
-    """读文本文件，最多返回 10000 个字符。"""
-   
-    file_path = Path(path).expanduser() # expanduser：展开"~""
-    if not file_path.is_absolute(): 
-        file_path = Path.cwd() / file_path # 如果不是绝对路径就拼接成绝对路径
-    logger.info(f"读取文件: {file_path}")
-
+def read_file(path: str) -> str:
+    """读取文本文件，超过 10000 字符截断，二进制返回错误"""
+    p = Path(path)
+    if not p.exists():
+        return f"[error] 文件不存在：{path}"
+    if not p.is_file():
+        return f"[error] 路径不是文件：{path}"
     try:
-        text = file_path.read_text(encoding="utf-8")
+        content = p.read_text(encoding="utf-8")
     except UnicodeDecodeError:
-        logger.error(f"无法读取二进制文件: {file_path}")
-        return f"[error] binary file not supported: {file_path}"
-    except FileNotFoundError:
-        logger.error(f"文件未找到: {file_path}")
-        return f"[error] file not found: {file_path}"
-
-    if len(text) > MAX_CHARS:
-        logger.info(f"文件内容过长，已截断: {file_path}")
-        return text[:MAX_CHARS] + "\n...[truncated to 10000 chars]"
-    return text # 如果超出就截断
+        return f"[error] 文件是二进制格式，无法读取：{path}"
+    if len(content) > _MAX_CHARS:
+        content = content[:_MAX_CHARS]
+        return content + f"\n\n[内容已截断，只显示前 {_MAX_CHARS} 字符]"
+    return content
 
 
-def write(path: str, content: str) -> str:
-    """只允许写入 workspace、uploads、logs。"""
-    file_path = Path(path).expanduser()
-    if not file_path.is_absolute():
-        file_path = Path.cwd() / file_path
-    logger.info(f"写入文件: {file_path}")
+def write_file(path: str, content: str, workspace_dir: str) -> str:
+    """写入文件，只允许写入 workspace 目录"""
+    allowed_dir = Path(workspace_dir).resolve()
+    p = Path(path).resolve()
+    try:
+        p.relative_to(allowed_dir)
+    except ValueError:
+        return f"[error] 安全限制：write 只能写入 {workspace_dir}/ 目录。目标路径：{path}"
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding="utf-8")
+        return f"文件已写入：{path}（{len(content)} 字符）"
+    except Exception as e:
+        logger.error(f"写文件失败：{path}，错误：{e}")
+        return f"[error] 写文件失败：{e}"
 
-    allowed_roots = [(Path.cwd() / name).resolve() for name in ALLOWED_WRITE_DIRS]
-    resolved = file_path.resolve()
 
-    if not any(root == resolved or root in resolved.parents for root in allowed_roots):
-        logger.error(f"写入路径不允许: {resolved}")
-        return f"[error] write path not allowed: {resolved}"
-
-    resolved.parent.mkdir(parents=True, exist_ok=True) # parents=True：自动递归创建多层不存在的父目录,如果父目录不存在就创建，exist_ok=True：如果目录已存在就不报错
-    resolved.write_text(content, encoding="utf-8")
-    logger.info(f"文件写入成功: {file_path}")
-    return f"OK: wrote {len(content)} chars to {resolved}"
+def register(registry, workspace_dir: str):
+    registry.register(
+        name="read",
+        description="Read the content of a text file. Returns up to 10,000 characters.",
+        parameters={
+            "type": "object",
+            "properties": {"path": {"type": "string", "description": "File path (relative or absolute)"}},
+            "required": ["path"],
+        },
+        handler=read_file,
+    )
+    registry.register(
+        name="write",
+        description=f"Write text content to a file. Creates parent directories if needed. Only allowed in {workspace_dir}/.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": f"File path (must be under {workspace_dir}/)"},
+                "content": {"type": "string", "description": "Text content to write"},
+            },
+            "required": ["path", "content"],
+        },
+        handler=lambda path, content: write_file(path, content, workspace_dir=workspace_dir),
+    )

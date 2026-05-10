@@ -1,4 +1,4 @@
-active_provider: kimi
+active_provider: deepseek
 
 providers:
   kimi:
@@ -12,9 +12,36 @@ skills:
   dir: ./skills
   enabled: null
 
+workspace:
+  dir: ./workspace
+
 agent:
   max_iterations: 15
 
 webui:
   host: 127.0.0.1
   port: 8000
+
+tool_policy:
+  default: allow
+  block_tools: []
+  confirm_tools: []
+  bash:
+    blocked_patterns:
+      - "rm -rf /"
+      - "rm -rf /*"
+      - "sudo"
+      - "shutdown"
+      - "reboot"
+      - "> /dev/"
+      - "mkfs"
+      - "dd if="
+    confirm_patterns:
+      - "rm "
+      - "mv "
+      - "chmod "
+      - "chown "
+  write:
+    confirm_paths:
+      - ".env"
+      - "config.yaml"
