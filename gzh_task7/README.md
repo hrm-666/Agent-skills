@@ -1,3 +1,4 @@
+```markdown
 # Mini Agent
 
 一个遵循 [agentskills.io](https://agentskills.io) 开放标准的轻量级 AI Agent 框架。
@@ -82,9 +83,10 @@ mini-agent/
 │   ├── shell.py            # bash
 │   └── skill_ops.py        # activate_skill
 ├── skills/                 # Skills 目录（可插拔）
-│   ├── hello-world/        # 示例 Skill
-│   ├── pledgebox-reader/   # PledgeBox 数据读取 Skill
-│   └── sqlite-sample/      # SQLite 示例 Skill
+│   ├── bilibili-rank/      # B站排行榜技能
+│   ├── hello-world/        # 示例技能
+│   ├── pledgebox-reader/   # PledgeBox 订单查询技能
+│   └── sqlite-sample/      # SQLite 示例技能
 ├── adapters/               # 适配器
 │   ├── cli.py              # 命令行界面
 │   └── server.py           # FastAPI 服务
@@ -93,6 +95,7 @@ mini-agent/
 ├── data/                   # 数据目录
 ├── logs/                   # 日志目录
 ├── uploads/                # 上传文件目录
+├── workspace/              # 工作区目录
 ├── config.yaml             # 主配置文件
 ├── .env                    # 密钥配置
 ├── main.py                 # 统一入口
@@ -119,7 +122,7 @@ providers:
 # Skills 配置
 skills:
   dir: ./skills
-  enabled: null  # null = 全部启用，或填白名单数组
+  enabled: null
 
 # Agent 配置
 agent:
@@ -129,6 +132,9 @@ agent:
 webui:
   host: 127.0.0.1
   port: 8000
+
+# 保存目录
+save_dir: workspace
 ```
 
 ## 内置工具
@@ -157,6 +163,35 @@ webui:
 **WebUI：**
 - 点击右下角 🧠 按钮打开记忆配置弹窗
 
+## 内置技能
+
+### B站排行榜技能
+
+获取B站全站或指定分区的视频排行榜。
+
+```bash
+# 全站前10
+python skills/bilibili-rank/scripts/fetch_rank.py 0 10
+
+# 鬼畜区前5
+python skills/bilibili-rank/scripts/fetch_rank.py 119 5
+```
+
+### PledgeBox 订单查询技能
+
+查询众筹平台的订单数据。
+
+```bash
+# 列出订单
+python skills/pledgebox-reader/scripts/fetch_orders.py --list --page 1
+
+# 按邮箱查找
+python skills/pledgebox-reader/scripts/fetch_orders.py --list --email "user@example.com"
+
+# 获取统计
+python skills/pledgebox-reader/scripts/fetch_orders.py --stats
+```
+
 ## 添加新 Skill
 
 1. 在 `skills/` 目录下创建新文件夹，如 `skills/my-skill/`
@@ -172,13 +207,13 @@ description: 简短描述这个 Skill 的功能和触发场景
 
 ## 使用说明
 
-1. 执行命令：
-   bash: python skills/my-skill/scripts/run.py
+执行命令：
+    python skills/my-skill/scripts/run.py
 
 ## 示例
 
 用户："触发我的技能"
-操作：bash python skills/my-skill/scripts/run.py
+执行：python skills/my-skill/scripts/run.py
 ```
 
 3. 在 `scripts/` 目录下放置实现脚本
@@ -205,17 +240,17 @@ python main.py setup
 
 ## 日志
 
-日志文件保存在 `logs/agent-YYYY-MM-DD.log`，同时输出到控制台（使用 rich 彩色输出）。
+日志文件保存在 `logs/agent-YYYY-MM-DD.log`，同时输出到控制台。
 
 ## 常见问题
 
-### Q: 提示 "API token 或 project_id 未配置"
+### Q: 提示 "API token 未配置"
 
 A: 检查 `.env` 文件是否配置了对应 Provider 的 API Key。
 
 ### Q: WebUI 发送消息后没有响应
 
-A: 检查后端是否正常运行，查看控制台日志是否有错误输出。
+A: 检查后端是否正常运行，查看控制台日志。
 
 ### Q: Skill 没有被加载
 
@@ -232,56 +267,3 @@ MIT
 - [Qwen API 文档](https://help.aliyun.com/zh/dashscope/)
 - [DeepSeek API 文档](https://platform.deepseek.com/api-docs/)
 ```
-
-## 如果需要更简洁的版本
-
-```markdown
-# Mini Agent
-
-轻量级 AI Agent 框架，遵循 agentskills.io 标准。
-
-## 快速开始
-
-```bash
-# 安装依赖
-pip install -r requirements.txt
-
-# 配置 API Key
-cp .env.example .env
-# 编辑 .env 填入你的 API Key
-
-# 启动 CLI 交互模式
-python main.py cli -i
-
-# 启动 WebUI
-python main.py webui
-```
-
-## 功能
-
-- 🔧 4 个内置工具：read / write / bash / activate_skill
-- 🧠 三种记忆模式：无记忆 / 有限记忆 / 永久记忆
-- 🌊 流式输出，逐字显示
-- 📦 Skills 即插即用
-- 🔀 支持 Kimi / Qwen / DeepSeek
-
-## 目录结构
-
-```
-core/          # 核心模块
-skills/        # Skills 目录
-adapters/      # CLI / WebUI
-webui/         # 前端页面
-```
-
-## 命令
-
-| 命令 | 说明 |
-|------|------|
-| `python main.py cli -i` | 交互式 CLI |
-| `python main.py webui` | 启动 WebUI |
-| `python main.py setup` | 初始化示例数据库 |
-
-## 许可证
-
-MIT

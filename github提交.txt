@@ -1,4 +1,4 @@
-cd G:\Users\len\Desktop\Agent-skills\gzh_task7
+cd G:\Users\len\Desktop\Agent-skills\
 git init
 git remote add origin https://github.com/hrm-666/Agent-skills.git
 git checkout -b gaozhenhang
@@ -6,4 +6,4 @@ git add .
 git status
 
 git commit -m "task7,更新b站查询和pledge项目查询"
-git push origin gaozhenhang
+git push origin gaozhenhang --force
