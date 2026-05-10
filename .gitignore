@@ -5,3 +5,7 @@
 **/logs/
 **/uploads/
 **/workspace/
+**/memory/
+**/*.json
+.memory_config.json
+memory_history.json

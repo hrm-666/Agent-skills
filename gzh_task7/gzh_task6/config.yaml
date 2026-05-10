@@ -18,10 +18,3 @@ agent:
 webui:
   host: 127.0.0.1
   port: 8000
-
-save_dir: workspace
-
-pledgebox:
-  api_token: "c1bRrdbod8CL56pLN9OzeUOlprUouJ6D"
-  project_id: 100001
-  base_url: "https://api.pledgebox.com/api/openapi"

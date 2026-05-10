@@ -18,8 +18,6 @@ def run_bash(command: str, timeout: int = 60) -> str:
             capture_output=True,
             timeout=timeout,
             text=True,
-            encoding='utf-8',
-            errors='replace'
         )
         
         output = f"[exit_code={result.returncode}]\n"

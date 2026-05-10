@@ -1,6 +1,18 @@
+<<<<<<< HEAD
 venv/ 
 __pycache__/ 
 *.pyc 
 logs/ 
 uploads/ 
 .env 
+memory/
+workplace/
+=======
+**/.env
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/logs/
+**/uploads/
+**/workspace/
+>>>>>>> a821e57a6421210d459c6d99a23950bcd2fbf995

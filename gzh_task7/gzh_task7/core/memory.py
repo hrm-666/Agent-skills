@@ -10,14 +10,8 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-MEMORY_DIR = Path("memory")
-MEMORY_CONFIG_FILE = MEMORY_DIR / ".memory_config.json"
-MEMORY_DATA_FILE = MEMORY_DIR / "memory_history.json"
-
-
-def ensure_memory_dir():
-    """确保 memory 目录存在"""
-    MEMORY_DIR.mkdir(exist_ok=True)
+MEMORY_CONFIG_FILE = ".memory_config.json"
+MEMORY_DATA_FILE = "memory_history.json"
 
 
 class ConversationMemory:
@@ -31,7 +25,6 @@ class ConversationMemory:
         self.mode = "none"
         self.limit = 10
         self.history: List[Dict] = []
-        ensure_memory_dir()
         
         if reset_on_start:
             # 启动时重置，不加载之前的配置和历史
@@ -43,9 +36,10 @@ class ConversationMemory:
     
     def _load_config(self):
         """加载记忆配置"""
-        if MEMORY_CONFIG_FILE.exists():
+        config_path = Path(MEMORY_CONFIG_FILE)
+        if config_path.exists():
             try:
-                with open(MEMORY_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     self.mode = config.get("mode", "none")
                     self.limit = config.get("limit", 10)
@@ -55,7 +49,6 @@ class ConversationMemory:
     
     def save_config(self):
         """保存记忆配置"""
-        ensure_memory_dir()
         config = {
             "mode": self.mode,
             "limit": self.limit,
@@ -67,28 +60,33 @@ class ConversationMemory:
     
     def _load_history(self):
         """加载永久记忆历史"""
-        if self.mode == "permanent" and MEMORY_DATA_FILE.exists():
-            try:
-                with open(MEMORY_DATA_FILE, 'r', encoding='utf-8') as f:
-                    self.history = json.load(f)
-                logger.info(f"加载永久记忆: {len(self.history)} 条记录")
-            except Exception as e:
-                logger.warning(f"加载记忆历史失败: {e}")
+        if self.mode == "permanent":
+            history_path = Path(MEMORY_DATA_FILE)
+            if history_path.exists():
+                try:
+                    with open(history_path, 'r', encoding='utf-8') as f:
+                        self.history = json.load(f)
+                    logger.info(f"加载永久记忆: {len(self.history)} 条记录")
+                except Exception as e:
+                    logger.warning(f"加载记忆历史失败: {e}")
+                    self.history = []
+            else:
                 self.history = []
     
     def save_history(self):
         """保存永久记忆历史"""
         if self.mode == "permanent":
-            ensure_memory_dir()
             with open(MEMORY_DATA_FILE, 'w', encoding='utf-8') as f:
                 json.dump(self.history, f, ensure_ascii=False, indent=2)
-            #logger.info(f"保存永久记忆: {len(self.history)} 条记录")
+            logger.info(f"保存永久记忆: {len(self.history)} 条记录")
     
     def clear_history(self):
         """清空记忆历史"""
         self.history = []
-        if self.mode == "permanent" and MEMORY_DATA_FILE.exists():
-            MEMORY_DATA_FILE.unlink()
+        if self.mode == "permanent":
+            history_path = Path(MEMORY_DATA_FILE)
+            if history_path.exists():
+                history_path.unlink()
         logger.info("清空记忆历史")
     
     def clear_all(self):
@@ -97,10 +95,15 @@ class ConversationMemory:
         self.limit = 10
         self.history = []
         
-        if MEMORY_CONFIG_FILE.exists():
-            MEMORY_CONFIG_FILE.unlink()
-        if MEMORY_DATA_FILE.exists():
-            MEMORY_DATA_FILE.unlink()
+        # 删除配置文件
+        config_path = Path(MEMORY_CONFIG_FILE)
+        if config_path.exists():
+            config_path.unlink()
+        
+        # 删除历史文件
+        history_path = Path(MEMORY_DATA_FILE)
+        if history_path.exists():
+            history_path.unlink()
         
         logger.info("完全清空所有记忆文件")
     
@@ -196,10 +199,13 @@ def clear_memory():
 def reset_memory():
     """完全重置记忆（清除所有文件，恢复到初始状态）"""
     global _global_memory
-    _global_memory = None
-    ensure_memory_dir()
-    if MEMORY_CONFIG_FILE.exists():
-        MEMORY_CONFIG_FILE.unlink()
-    if MEMORY_DATA_FILE.exists():
-        MEMORY_DATA_FILE.unlink()
+    _global_memory = None  # 重置全局实例
+    # 删除配置文件
+    config_path = Path(MEMORY_CONFIG_FILE)
+    if config_path.exists():
+        config_path.unlink()
+    # 删除历史文件
+    history_path = Path(MEMORY_DATA_FILE)
+    if history_path.exists():
+        history_path.unlink()
     logger.info("记忆已完全重置（文件已删除）")

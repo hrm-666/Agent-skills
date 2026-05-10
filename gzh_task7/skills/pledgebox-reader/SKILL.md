@@ -1,108 +1,44 @@
 ---
 name: pledgebox-reader
-description: "Query orders, backers, and shipping info from PledgeBox crowdfunding platform. Use when user asks: get orders, list backers, find order by email, check order status, show pledge statistics, export survey data, or any PledgeBox data query."
+description: 查询PledgeBox众筹平台的订单、支持者和物流信息。当用户询问订单列表、支持者数据、按邮箱查找订单、订单状态统计、导出调查数据或任何PledgeBox数据查询时使用。
 ---
 
-# PledgeBox Data Reader Skill
+# PledgeBox数据读取技能
 
-This skill reads data from PledgeBox platform via official OpenAPI.
+## 命令列表
 
-## Prerequisite: Configuration
+列出订单
+    python skills/pledgebox-reader/scripts/fetch_orders.py --list --page 1
 
-First-time use requires API token in `config.yaml`:
+按状态筛选（Locked/Unlock/Shipped）
+    python skills/pledgebox-reader/scripts/fetch_orders.py --list --status Locked
 
-```yaml
-pledgebox:
-  api_token: "your_api_token_here"
-  project_id: 100001
-```
+按邮箱查找
+    python skills/pledgebox-reader/scripts/fetch_orders.py --list --email "demo@pledgebox.com"
 
-Get API token from: PledgeBox Dashboard → Settings → API
+获取统计
+    python skills/pledgebox-reader/scripts/fetch_orders.py --stats
 
-## Available Commands (use bash tool directly)
+导出JSON
+    python skills/pledgebox-reader/scripts/fetch_orders.py --export-json orders.json
 
-### 1. List all orders (completed)
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --completed
-```
+导出CSV
+    python skills/pledgebox-reader/scripts/fetch_orders.py --export-csv orders.csv
 
-### 2. Find order by email
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --email "user@example.com"
-```
+## 输出格式
 
-### 3. Get order by PledgeBox ID
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --pbid "PBID003315433"
-```
+列表查询返回 total_count 和 orders 数组，展示时列出订单信息。
 
-### 4. Filter by status (unlock/locked/shipped/refunded)
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --status "Locked"
-```
+统计返回 total_orders、total_paid_amount、status_breakdown。
 
-### 5. Get campaign statistics (total backers, total amount, average)
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --stats
-```
+导出命令返回 success、message 和 file 路径，展示时告知用户保存位置。
 
-### 6. Export all orders to JSON file
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --export --output orders.json
-```
+## 示例
 
-### 7. List all orders (paginated, default page=1, limit=20)
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --list --page 1 --limit 20
-```
+用户: "查看PledgeBox订单列表"
 
-## Output Format
+执行: python skills/pledgebox-reader/scripts/fetch_orders.py --list --page 1
 
-All commands return JSON:
+用户: "导出订单为CSV"
 
-```json
-{
-  "success": true,
-  "data": [...],
-  "count": 10,
-  "message": "Found 10 orders"
-}
-```
-
-If error:
-
-```json
-{
-  "success": false,
-  "error": "Error message here"
-}
-```
-
-## Examples
-
-**User**: "Show me all completed orders from PledgeBox"
-
-**Action**:
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --completed
-```
-
-**User**: "Find order for email demo@pledgebox.com"
-
-**Action**:
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --email "demo@pledgebox.com"
-```
-
-**User**: "What's the total pledge amount?"
-
-**Action**:
-```bash
-python skills/pledgebox-reader/scripts/fetch_orders.py --stats
-```
-
-## Notes
-
-- API token and project_id must be configured before first use
-- All operations are read-only (GET requests only)
-- Results are automatically paginated, use --page to navigate
+执行: python skills/pledgebox-reader/scripts/fetch_orders.py --export-csv orders.csv

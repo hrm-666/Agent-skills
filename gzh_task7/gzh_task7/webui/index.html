@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Agent - 流式输出</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .messages-container::-webkit-scrollbar { width: 6px; }
+        .messages-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .messages-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        .tool-details { max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; }
+        .tool-details.open { max-height: 300px; overflow-y: auto; }
+        .user-bubble { background-color: #f3f4f6; border-radius: 18px 18px 4px 18px; }
+        .agent-bubble { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 18px 18px 18px 4px; }
+        #message-input { max-height: 120px; overflow-y: auto; }
+        #message-input:empty:before { content: "输入消息..."; color: #9ca3af; }
+        .file-tag { background-color: #e5e7eb; border-radius: 9999px; padding: 2px 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+        .file-tag button { color: #6b7280; cursor: pointer; }
+        .file-tag button:hover { color: #ef4444; }
+        .tool-call-summary { cursor: pointer; user-select: none; }
+        .tool-call-summary:hover { background-color: #f3f4f6; }
+        
+        /* 类 Markdown 样式 */
+        .agent-content { line-height: 1.6; font-size: 0.95rem; }
+        .agent-content .md-h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75em 0 0.5em; border-bottom: 1px solid #e5e7eb; }
+        .agent-content .md-h2 { font-size: 1.25rem; font-weight: 600; margin: 0.6em 0 0.4em; }
+        .agent-content .md-h3 { font-size: 1.125rem; font-weight: 600; margin: 0.5em 0 0.3em; }
+        .agent-content .md-code { background-color: #f3f4f6; padding: 0.2em 0.4em; border-radius: 4px; font-family: monospace; font-size: 0.875em; }
+        .agent-content .md-pre { background-color: #f3f4f6; padding: 0.75em; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 0.875em; margin: 0.5em 0; white-space: pre-wrap; }
+        .agent-content .md-quote { border-left: 3px solid #d1d5db; padding-left: 1em; margin: 0.5em 0; color: #6b7280; }
+        .agent-content .md-list-item { margin-left: 1.5em; list-style-type: disc; }
+        .agent-content .md-numbered-item { margin-left: 1.5em; list-style-type: decimal; }
+        .agent-content .md-bold { font-weight: 700; }
+        .agent-content .md-italic { font-style: italic; }
+        
+        /* 跳动点动画 */
+        .thinking-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .thinking-dots span {
+            width: 6px;
+            height: 6px;
+            background-color: #9ca3af;
+            border-radius: 50%;
+            animation: dot-bounce 1.4s ease-in-out infinite;
+        }
+        .thinking-dots span:nth-child(1) { animation-delay: 0s; }
+        .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dot-bounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+        
+        /* 字符淡入动画 */
+        .char-appear {
+            animation: fadeIn 0.05s ease-out;
+            display: inline;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(1px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 模态框样式 */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans antialiased">
+    <!-- 记忆配置模态框 -->
+    <div id="memory-modal" class="fixed inset-0 modal-overlay flex items-center justify-center z-50" style="display: flex;">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">🧠 记忆功能配置</h3>
+                <p class="text-sm text-gray-500 mt-1">请选择对话记忆模式</p>
+            </div>
+            <div class="px-6 py-4">
+                <p class="text-sm text-gray-600 mb-4">记忆模式说明：</p>
+                
+                <div class="space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="radio" name="memory-mode" value="none" class="w-4 h-4 mt-0.5 text-indigo-600" checked>
+                        <div>
+                            <div class="font-medium text-gray-800">无记忆</div>
+                            <div class="text-xs text-gray-500">每次对话独立，不记住之前的内容</div>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="radio" name="memory-mode" value="limited" class="w-4 h-4 mt-0.5 text-indigo-600">
+                        <div>
+                            <div class="font-medium text-gray-800">有限记忆</div>
+                            <div class="text-xs text-gray-500">
+                                记住最近 
+                                <input type="number" id="memory-limit" class="w-16 px-1 py-0.5 border rounded text-center" value="10" min="1" max="100" onclick="event.stopPropagation()">
+                                轮对话
+                            </div>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="radio" name="memory-mode" value="permanent" class="w-4 h-4 mt-0.5 text-indigo-600">
+                        <div>
+                            <div class="font-medium text-gray-800">永久记忆</div>
+                            <div class="text-xs text-gray-500">记住所有对话，保存到文件</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-200 flex justify-end">
+                <button id="memory-save-btn" class="px-5 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">开始对话</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col h-screen max-w-4xl mx-auto shadow-xl bg-white">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+            <h1 class="text-xl font-semibold text-gray-800">Mini Agent</h1>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500">Model</span>
+                <select id="provider-select" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <option value="kimi">Kimi</option>
+                    <option value="qwen">Qwen</option>
+                    <option value="deepseek">DeepSeek</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="messages" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 messages-container bg-gray-50">
+            <div class="text-center text-gray-400 text-sm py-8">选择记忆模式后开始对话</div>
+        </div>
+
+        <div class="border-t border-gray-200 bg-white p-4">
+            <div id="file-list" class="flex flex-wrap gap-2 mb-2"></div>
+            <div class="flex items-end gap-2">
+                <button id="upload-btn" class="flex-shrink-0 w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                </button>
+                <div class="flex-1 bg-gray-100 rounded-2xl px-4 py-2 min-h-[44px] max-h-[120px] overflow-y-auto" contenteditable="true" id="message-input"></div>
+                <button id="send-btn" class="flex-shrink-0 px-5 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition font-medium" disabled>发送</button>
+            </div>
+            <div class="text-xs text-gray-400 text-center mt-2">Shift + Enter 换行，Enter 发送</div>
+        </div>
+        <input type="file" id="file-input" multiple style="display: none;">
+    </div>
+
+    <!-- 记忆按钮 -->
+    <button id="memory-btn" class="fixed bottom-20 right-4 w-10 h-10 bg-gray-200 rounded-full hover:bg-gray-300 transition flex items-center justify-center shadow-md z-10" title="记忆设置">
+        🧠
+    </button>
+
+    <script>
+        let uploadedFiles = [];
+        let currentProvider = localStorage.getItem('provider') || 'kimi';
+        let isStreaming = false;
+        let isMemoryConfigured = false;
+
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const uploadBtn = document.getElementById('upload-btn');
+        const fileInput = document.getElementById('file-input');
+        const providerSelect = document.getElementById('provider-select');
+        const fileListDiv = document.getElementById('file-list');
+
+        function escapeHtml(text) { 
+            if (!text) return ''; 
+            const div = document.createElement('div'); 
+            div.textContent = text; 
+            return div.innerHTML; 
+        }
+        
+        function scrollToBottom() { 
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; 
+        }
+        
+        function formatArgsSummary(args) {
+            if (!args || Object.keys(args).length === 0) return '{}';
+            const str = JSON.stringify(args);
+            return str.length > 40 ? str.substring(0, 40) + '...' : str;
+        }
+
+        function showTempMessage(msg, type) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-20 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-full text-sm shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        window.toggleToolDetails = function(el) {
+            const details = el.parentElement.querySelector('.tool-details');
+            if (details) { 
+                details.classList.toggle('open'); 
+                const arrow = el.querySelector('.arrow'); 
+                if (arrow) arrow.textContent = details.classList.contains('open') ? '▲' : '▼'; 
+            }
+        };
+
+        providerSelect.value = currentProvider;
+        providerSelect.addEventListener('change', () => { 
+            currentProvider = providerSelect.value; 
+            localStorage.setItem('provider', currentProvider); 
+        });
+
+        function updateFileListDisplay() {
+            if (uploadedFiles.length === 0) { 
+                fileListDiv.innerHTML = ''; 
+                return; 
+            }
+            fileListDiv.innerHTML = uploadedFiles.map((file, idx) => `<div class="file-tag"><span>📎 ${escapeHtml(file.name)}</span><button onclick="removeFile(${idx})">✕</button></div>`).join('');
+        }
+
+        window.removeFile = function(idx) { 
+            uploadedFiles.splice(idx, 1); 
+            updateFileListDisplay(); 
+        };
+
+        function addUserMessage(text, files) {
+            const welcomeDiv = messagesDiv.querySelector('.text-center.text-gray-400');
+            if (welcomeDiv && messagesDiv.children.length === 1) welcomeDiv.remove();
+            
+            const div = document.createElement('div');
+            div.className = 'flex justify-end';
+            let filesHtml = '';
+            if (files.length > 0) {
+                filesHtml = '<div class="flex flex-wrap gap-2 mb-2 justify-end">';
+                for (const f of files) {
+                    const isImage = f.url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                    if (isImage) {
+                        filesHtml += `<img src="${f.url}" class="max-w-[100px] max-h-[100px] rounded-lg border border-gray-200 object-cover">`;
+                    } else {
+                        filesHtml += `<span class="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">📎 ${escapeHtml(f.name)}</span>`;
+                    }
+                }
+                filesHtml += '</div>';
+            }
+            div.innerHTML = `<div class="max-w-[80%] user-bubble px-4 py-2 shadow-sm">${filesHtml}<div class="whitespace-pre-wrap break-words text-gray-800">${escapeHtml(text)}</div></div>`;
+            messagesDiv.appendChild(div);
+            scrollToBottom();
+            // 启用发送按钮
+            sendBtn.disabled = false;
+        }
+
+        function applyFullMarkdown(text) {
+            if (!text) return '';
+            let result = escapeHtml(text);
+            result = result.replace(/^### (.+)$/gm, '<div class="md-h3">$1</div>');
+            result = result.replace(/^## (.+)$/gm, '<div class="md-h2">$1</div>');
+            result = result.replace(/^# (.+)$/gm, '<div class="md-h1">$1</div>');
+            result = result.replace(/```([\s\S]*?)```/g, '<pre class="md-pre">$1</pre>');
+            result = result.replace(/`([^`]+)`/g, '<code class="md-code">$1</code>');
+            result = result.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+            result = result.replace(/\*\*([^*]+)\*\*/g, '<strong class="md-bold">$1</strong>');
+            result = result.replace(/\*([^*]+)\*/g, '<em class="md-italic">$1</em>');
+            result = result.replace(/^> (.+)$/gm, '<div class="md-quote">$1</div>');
+            result = result.replace(/^- (.+)$/gm, '<div class="md-list-item">• $1</div>');
+            result = result.replace(/^\d+\. (.+)$/gm, '<div class="md-numbered-item">$1</div>');
+            result = result.replace(/\n/g, '<br>');
+            return result;
+        }
+
+        function addThinkingMessage() {
+            const id = 'thinking-' + Date.now();
+            const div = document.createElement('div'); 
+            div.id = id; 
+            div.className = 'flex justify-start';
+            div.innerHTML = `<div class="max-w-[85%] agent-bubble px-4 py-2 shadow-sm">
+                <div class="flex items-center gap-2 text-gray-500">
+                    <span>思考中</span>
+                    <div class="thinking-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>`;
+            messagesDiv.appendChild(div); 
+            scrollToBottom(); 
+            return id;
+        }
+
+        function replaceThinkingWithContainer(thinkingId) {
+            const thinkingDiv = document.getElementById(thinkingId);
+            if (!thinkingDiv) return null;
+            
+            const newId = 'streaming-' + Date.now();
+            const newDiv = document.createElement('div'); 
+            newDiv.id = newId; 
+            newDiv.className = 'flex justify-start';
+            newDiv.innerHTML = `<div class="max-w-[85%] agent-bubble px-4 py-2 shadow-sm">
+                <div class="tools-container"></div>
+                <div class="agent-content text-gray-700"></div>
+            </div>`;
+            
+            thinkingDiv.replaceWith(newDiv);
+            scrollToBottom();
+            
+            return {
+                id: newId,
+                container: newDiv,
+                toolsDiv: newDiv.querySelector('.tools-container'),
+                contentDiv: newDiv.querySelector('.agent-content')
+            };
+        }
+
+        function updateToolsDisplay(toolsDiv, steps) {
+            if (!toolsDiv) return;
+            let toolsHtml = '';
+            for (const step of steps) {
+                if (step.type === 'tool_call') {
+                    const argsSummary = formatArgsSummary(step.args);
+                    const argsFull = JSON.stringify(step.args, null, 2);
+                    toolsHtml += `<div class="tool-call mb-2 text-sm border-l-2 border-indigo-300 pl-2">
+                        <div class="tool-call-summary flex items-center gap-1 text-gray-600 py-1 rounded" onclick="toggleToolDetails(this)">
+                            <span>🔧</span>
+                            <span class="font-mono text-sm">${escapeHtml(step.name)}</span>
+                            <span class="text-gray-400 text-xs">${escapeHtml(argsSummary)}</span>
+                            <span class="arrow text-xs text-gray-400">▼</span>
+                        </div>
+                        <div class="tool-details ml-6 mt-1 text-xs text-gray-500 font-mono">
+                            <div class="mb-1">📋 参数:</div>
+                            <pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${escapeHtml(argsFull)}</pre>
+                            ${step.result ? `<div class="mt-1 mb-1">✅ 结果:</div><pre class="bg-gray-100 p-2 rounded text-xs overflow-x-auto">${escapeHtml(step.result)}</pre>` : ''}
+                        </div>
+                    </div>`;
+                }
+            }
+            toolsDiv.innerHTML = toolsHtml;
+        }
+
+        async function appendChar(contentDiv, char) {
+            if (!contentDiv) return;
+            const charSpan = document.createElement('span');
+            charSpan.textContent = char;
+            charSpan.className = 'char-appear';
+            if (char === '\n') {
+                charSpan.innerHTML = '<br>';
+                charSpan.textContent = '';
+            }
+            contentDiv.appendChild(charSpan);
+            scrollToBottom();
+        }
+
+        async function uploadFiles(files) {
+            for (const file of files) {
+                const formData = new FormData(); 
+                formData.append('file', file);
+                try {
+                    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (res.ok) {
+                        uploadedFiles.push({ name: data.name, path: data.path, url: data.url, size: data.size });
+                        updateFileListDisplay(); 
+                        showTempMessage(`已上传: ${data.name}`, 'success');
+                    } else {
+                        showTempMessage(`上传失败: ${file.name}`, 'error');
+                    }
+                } catch (err) { 
+                    showTempMessage(`上传失败: ${file.name}`, 'error'); 
+                }
+            }
+        }
+
+        async function sendMessage() {
+            if (!isMemoryConfigured) {
+                showTempMessage('请先配置记忆模式', 'error');
+                return;
+            }
+            if (isStreaming) {
+                showTempMessage('正在生成中，请稍后...', 'error');
+                return;
+            }
+            
+            const text = messageInput.innerText.trim();
+            if (!text && uploadedFiles.length === 0) return;
+            
+            const userText = text || (uploadedFiles.length ? '请处理上传的文件' : '');
+            const fileUrls = uploadedFiles.map(f => f.url);
+            const imagePaths = uploadedFiles.filter(f => f.url.match(/\.(jpg|jpeg|png|gif|webp)$/i)).map(f => f.url);
+            
+            addUserMessage(userText, uploadedFiles);
+            messageInput.innerText = '';
+            uploadedFiles = [];
+            updateFileListDisplay();
+            
+            const thinkingId = addThinkingMessage();
+            isStreaming = true;
+            
+            let fullReply = '';
+            let steps = [];
+            let streamingContainer = null;
+            
+            try {
+                const response = await fetch('/api/chat/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        text: userText, 
+                        image_paths: imagePaths, 
+                        file_paths: fileUrls, 
+                        provider: currentProvider 
+                    })
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let isFirstChunk = true;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6).trim();
+                            if (dataStr === '[DONE]') continue;
+                            if (!dataStr) continue;
+                            
+                            try {
+                                const data = JSON.parse(dataStr);
+                                
+                                if (data.type === 'chunk') {
+                                    const chunkContent = data.content;
+                                    fullReply += chunkContent;
+                                    
+                                    if (isFirstChunk && streamingContainer === null) {
+                                        streamingContainer = replaceThinkingWithContainer(thinkingId);
+                                        isFirstChunk = false;
+                                    }
+                                    
+                                    if (streamingContainer) {
+                                        for (let i = 0; i < chunkContent.length; i++) {
+                                            await appendChar(streamingContainer.contentDiv, chunkContent[i]);
+                                            await new Promise(r => setTimeout(r, 8));
+                                        }
+                                    }
+                                } else if (data.type === 'tool_call') {
+                                    steps.push({ type: 'tool_call', name: data.name, args: data.args });
+                                    if (streamingContainer) updateToolsDisplay(streamingContainer.toolsDiv, steps);
+                                } else if (data.type === 'tool_result') {
+                                    const step = steps.find(s => s.type === 'tool_call' && s.name === data.name && !s.result);
+                                    if (step) step.result = data.result;
+                                    if (streamingContainer) updateToolsDisplay(streamingContainer.toolsDiv, steps);
+                                } else if (data.type === 'complete') {
+                                    fullReply = data.content;
+                                    steps = data.steps || [];
+                                    if (streamingContainer) {
+                                        updateToolsDisplay(streamingContainer.toolsDiv, steps);
+                                        if (streamingContainer.contentDiv) {
+                                            streamingContainer.contentDiv.innerHTML = applyFullMarkdown(fullReply);
+                                        }
+                                    }
+                                } else if (data.type === 'error') {
+                                    if (streamingContainer) {
+                                        streamingContainer.contentDiv.innerHTML = `<span class="text-red-600">错误: ${escapeHtml(data.content)}</span>`;
+                                    } else {
+                                        const errorDiv = document.getElementById(thinkingId);
+                                        if (errorDiv) {
+                                            errorDiv.innerHTML = `<div class="max-w-[85%] agent-bubble px-4 py-2 shadow-sm"><div class="text-red-600">错误: ${escapeHtml(data.content)}</div></div>`;
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Parse error:', e, dataStr);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (err) {
+                console.error('Stream error:', err);
+                const errorDiv = document.getElementById(thinkingId);
+                if (errorDiv) {
+                    errorDiv.innerHTML = `<div class="max-w-[85%] agent-bubble px-4 py-2 shadow-sm"><div class="text-red-600">网络错误: ${escapeHtml(err.message)}</div></div>`;
+                }
+            } finally {
+                isStreaming = false;
+            }
+        }
+
+        // ========== 记忆功能 ==========
+        async function saveMemoryConfig() {
+            const selected = document.querySelector('input[name="memory-mode"]:checked');
+            if (!selected) return;
+            
+            const mode = selected.value;
+            const limit = parseInt(document.getElementById('memory-limit')?.value || '10');
+            
+            try {
+                const res = await fetch('/api/memory/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode, limit })
+                });
+                
+                if (res.ok) {
+                    isMemoryConfigured = true;
+                    closeMemoryModal();
+                    showTempMessage(`记忆模式已设置为 ${mode}`, 'success');
+                    sendBtn.disabled = false;
+                    const welcomeMsg = messagesDiv.querySelector('.text-center.text-gray-400');
+                    if (welcomeMsg) {
+                        welcomeMsg.innerHTML = '记忆已配置，开始对话';
+                    }
+                } else {
+                    showTempMessage('保存失败', 'error');
+                }
+            } catch (err) {
+                showTempMessage('保存失败', 'error');
+            }
+        }
+
+        function showMemoryModal() {
+            const modal = document.getElementById('memory-modal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeMemoryModal() {
+            const modal = document.getElementById('memory-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        // 绑定记忆按钮事件
+        document.getElementById('memory-btn')?.addEventListener('click', showMemoryModal);
+        document.getElementById('memory-save-btn')?.addEventListener('click', saveMemoryConfig);
+        
+        document.getElementById('memory-modal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('memory-modal')) {
+                // 不关闭，必须选择
+            }
+        });
+
+        // 事件绑定
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async (e) => { 
+            if (e.target.files.length) { 
+                await uploadFiles(Array.from(e.target.files)); 
+                fileInput.value = ''; 
+            } 
+        });
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter' && !e.shiftKey && isMemoryConfigured && !isStreaming) { 
+                e.preventDefault(); 
+                sendMessage(); 
+            } 
+        });
+        
+        const dropZone = messageInput.parentElement;
+        dropZone.addEventListener('dragover', (e) => { 
+            e.preventDefault(); 
+            dropZone.classList.add('ring-2', 'ring-indigo-500'); 
+        });
+        dropZone.addEventListener('dragleave', () => { 
+            dropZone.classList.remove('ring-2', 'ring-indigo-500'); 
+        });
+        dropZone.addEventListener('drop', async (e) => { 
+            e.preventDefault(); 
+            dropZone.classList.remove('ring-2', 'ring-indigo-500'); 
+            if (e.dataTransfer.files.length) {
+                await uploadFiles(Array.from(e.dataTransfer.files));
+            }
+        });
+
+        messageInput.focus();
+        console.log('WebUI 已加载 - 请先配置记忆模式');
+        
+        // 第一次加载时自动显示记忆配置
+        setTimeout(() => {
+            showMemoryModal();
+        }, 100);
+    </script>
+</body>
+</html>
