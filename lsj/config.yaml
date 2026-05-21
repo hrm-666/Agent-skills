@@ -2,7 +2,7 @@ active_provider: openrouter
 
 providers:
   openrouter:
-    model: moonshotai/kimi-k2.5
+    model: poolside/laguna-m.1:free
   deepseek:
     model: deepseek-chat
 

@@ -16,6 +16,22 @@ from urllib.request import Request, urlopen
 
 BASE_URL = "https://api.pledgebox.com/api/openapi/orders"
 
+
+def load_local_env() -> None:
+    for parent in Path(__file__).resolve().parents:
+        env_path = parent / ".env"
+        if not env_path.exists():
+            continue
+        for raw_line in env_path.read_text(encoding="utf-8-sig").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            if key and key not in os.environ:
+                os.environ[key] = value.strip().strip('"').strip("'")
+        return
+
 ORDER_FIELDS = [
     "order_id",
     "pbid",
@@ -509,6 +525,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    load_local_env()
     args = parse_args()
     api_token = compact_token(args.api_token)
     if not api_token:
