@@ -1,0 +1,92 @@
+{
+  "type": "object",
+  "required": [
+    "pbid",
+    "email",
+    "order_status",
+    "shipping_address",
+    "reward",
+    "addons",
+    "gifts"
+  ],
+  "properties": {
+    "id": { "type": ["number", "null"] },
+    "pbid": { "type": ["string", "null"] },
+    "ks_id": { "type": ["number", "null"] },
+    "sequence": { "type": ["number", "null"] },
+    "email": { "type": ["string", "null"] },
+    "order_status": { "type": ["string", "null"] },
+    "survey_status": { "type": ["string", "null"] },
+    "date_confirmed": { "type": ["string", "null"] },
+    "courier_name": { "type": ["string", "null"] },
+    "tracking_code": { "type": ["string", "null"] },
+    "shipping_address": {
+      "type": "object",
+      "properties": {
+        "address": { "type": ["string", "null"] },
+        "address2": { "type": ["string", "null"] },
+        "city": { "type": ["string", "null"] },
+        "state": { "type": ["string", "null"] },
+        "zip": { "type": ["string", "null"] },
+        "country": { "type": ["string", "null"] },
+        "country_code": { "type": ["string", "null"] },
+        "phone": { "type": ["string", "null"] },
+        "name": { "type": ["string", "null"] }
+      }
+    },
+    "paid_amount": { "type": ["number", "string", "null"] },
+    "credit_offer": { "type": ["number", "string", "null"] },
+    "balance": { "type": ["number", "string", "null"] },
+    "reward": {
+      "type": "object",
+      "properties": {
+        "id": { "type": ["number", "null"] },
+        "name": { "type": ["string", "null"] },
+        "price": { "type": ["number", "string", "null"] },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": ["number", "null"] },
+              "name": { "type": ["string", "null"] },
+              "sku": { "type": ["string", "null"] },
+              "variant": { "type": ["array", "object"] },
+              "number": { "type": ["number", "null"] },
+              "questions": { "type": "array" }
+            }
+          }
+        },
+        "questions": { "type": "array" }
+      }
+    },
+    "addons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": ["number", "null"] },
+          "name": { "type": ["string", "null"] },
+          "sku": { "type": ["string", "null"] },
+          "price": { "type": ["number", "string", "null"] },
+          "variant": { "type": ["array", "object"] },
+          "number": { "type": ["number", "null"] },
+          "questions": { "type": "array" }
+        }
+      }
+    },
+    "gifts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": ["number", "null"] },
+          "name": { "type": ["string", "null"] },
+          "sku": { "type": ["string", "null"] },
+          "variant": { "type": ["array", "object"] },
+          "number": { "type": ["number", "null"] }
+        }
+      }
+    }
+  }
+}

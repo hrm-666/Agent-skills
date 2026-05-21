@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
-import sys
 from datetime import datetime
 from pathlib import Path
+
+from rich.logging import RichHandler
 
 
 def setup_logging(level: int = logging.INFO) -> None:
@@ -17,8 +18,12 @@ def setup_logging(level: int = logging.INFO) -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
+    console_handler = RichHandler(
+        rich_tracebacks=True,
+        show_path=False,
+        show_time=False,
+        console=None,
+    )
 
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(formatter)
@@ -28,4 +33,3 @@ def setup_logging(level: int = logging.INFO) -> None:
     root_logger.handlers.clear()
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
-

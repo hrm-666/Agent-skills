@@ -1,8 +1,25 @@
+from __future__ import annotations
+
+import base64
 import json
 import logging
+import mimetypes
+from pathlib import Path
 from typing import Callable, Optional
 
+from core.tools import ToolConfirmationRequired
+
 logger = logging.getLogger(__name__)
+
+
+class AgentConfirmationRequired(Exception):
+    def __init__(self, tool_name: str, arguments: dict, message: str, risk: str = "high"):
+        super().__init__(message)
+        self.tool_name = tool_name
+        self.arguments = arguments
+        self.message = message
+        self.risk = risk
+
 
 class Agent:
     def __init__(
@@ -22,6 +39,7 @@ class Agent:
         user_text: str,
         image_paths: Optional[list[str]] = None,
         on_step: Optional[Callable] = None,  # 每轮 loop 的回调,WebUI 用
+        on_text_delta: Optional[Callable[[str], None]] = None,
     ) -> str:
         """
         执行一次完整的 agent loop。
@@ -39,9 +57,7 @@ class Agent:
         3. 超过 max_iterations 返回错误提示
         """
         system = self._build_system_prompt()
-        messages = [
-            {"role": "user", "content": user_text}
-        ]
+        messages = [self._build_user_message(user_text, image_paths)]
         tools = self.tool_registry.get_openai_schemas()
 
         last_progress = ""
@@ -49,7 +65,7 @@ class Agent:
 
         for iteration in range(1, self.max_iterations + 1):
             logger.info("agent iteration=%s llm_call messages=%s", iteration, len(messages))
-            message = self.llm.complete(system, messages, tools)
+            message = self._complete(system, messages, tools, on_text_delta)
             tool_calls = getattr(message, "tool_calls", None)
 
             if tool_calls:
@@ -65,7 +81,11 @@ class Agent:
                         arguments = {}
                         result = f"[error] Invalid tool arguments : {exc}"
                     else:
-                        result = self.tool_registry.execute(tool_name, arguments)
+                        try:
+                            result = self.tool_registry.execute(tool_name, arguments)
+                        except ToolConfirmationRequired as exc:
+                            logger.info("agent confirmation required tool=%s", tool_name)
+                            raise AgentConfirmationRequired(tool_name, arguments, exc.message, exc.risk) from exc
 
                     last_progress = result
                     logger.info(
@@ -94,6 +114,27 @@ class Agent:
         
         logger.info("agent max_iterations reached max=%s last_progress_len=%s", self.max_iterations, len(last_progress))
         return f"[error] Agent failed to complete task within {self.max_iterations} iterations. Last progress: {last_progress}"
+
+    def _complete(
+        self,
+        system: str,
+        messages: list,
+        tools: list,
+        on_text_delta: Optional[Callable[[str], None]] = None,
+    ):
+        if not on_text_delta:
+            return self.llm.complete(system, messages, tools)
+
+        try:
+            stream = self.llm.stream_complete(system, messages, tools)
+            return self.llm.collect_stream(stream, on_text_delta)
+        except Exception:
+            logger.exception("llm streaming failed, fallback to non-streaming")
+            message = self.llm.complete(system, messages, tools)
+            if message.content and on_text_delta:
+                on_text_delta(message.content)
+            return message
+
     def _build_system_prompt(self) -> str:
         skill_catalog = self.skill_loader.get_catalog_text()
         return f"""
@@ -109,7 +150,53 @@ class Agent:
     Rules:
     - Always use activate_skill BEFORE bash-ing into a skill's scripts
     - After activating a skill, follow its SKILL.md instructions exactly
+    - For user-created, deleted, or modified files, operate inside workspace/ unless the user explicitly asks otherwise
+    - When using bash for file operations, always include explicit workspace/ paths instead of bare filenames
+    - Prefer the write tool over bash when creating or editing text files
     - Keep responses concise unless user asks for detail
     """.strip()
 
-        
+    def _build_user_message(self, user_text: str, image_paths: Optional[list[str]]) -> dict:
+        if not image_paths:
+            return {"role": "user", "content": user_text}
+
+        content: list[dict] = []
+
+        for image_path in image_paths:
+            file_path = self._resolve_local_path(image_path)
+            if not file_path.exists():
+                logger.warning("image file not found path=%s", image_path)
+                content.append({"type": "text", "text": f"[图片不存在: {image_path}]"})
+                continue
+
+            mime_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+            if not mime_type.startswith("image/"):
+                content.append({"type": "text", "text": f"[附件: {image_path}]"})
+                continue
+
+            if not self.llm.supports_vision:
+                logger.warning("provider=%s does not support vision, image passed as text path=%s", self.llm.provider, image_path)
+                content.append({"type": "text", "text": f"[图片: {image_path}，当前模型不支持视觉输入]"})
+                continue
+
+            image_bytes = file_path.read_bytes()
+            image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{image_base64}"},
+            })
+
+        content.append({"type": "text", "text": user_text})
+        return {"role": "user", "content": content}
+
+    def _resolve_local_path(self, path: str) -> Path:
+        file_path = Path(path).expanduser()
+        if file_path.is_absolute():
+            try:
+                relative_path = file_path.relative_to(file_path.anchor)
+            except ValueError:
+                return file_path
+            if relative_path.parts and relative_path.parts[0] == "uploads":
+                return Path.cwd() / relative_path
+            return file_path
+        return Path.cwd() / file_path

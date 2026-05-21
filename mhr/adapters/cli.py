@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
+from core.agent import AgentConfirmationRequired
 from core.agent import Agent
 from core.llm import LLM, PROVIDERS
 from core.skills import SkillLoader
@@ -25,6 +26,9 @@ def create_agent(provider_override: str | None = None) -> Agent:
     api_key = os.getenv(provider_config["env_key"])
     if not api_key:
         raise RuntimeError(f"缺少环境变量: {provider_config['env_key']}")
+    selected_model = config.get("providers", {}).get(provider, {}).get("model") or provider_config["default_model"]
+    os.environ["MINI_AGENT_ACTIVE_PROVIDER"] = provider
+    os.environ["MINI_AGENT_ACTIVE_MODEL"] = selected_model
 
     skill_loader = SkillLoader(Path(config.get("skills", {}).get("dir", "./skills")), config.get("skills", {}).get("enabled"))
     skill_loader.scan()
@@ -52,7 +56,7 @@ def create_agent(provider_override: str | None = None) -> Agent:
     )
     tool_registry.register(
         "bash",
-        "Execute a shell command. Use this to run skill scripts, curl APIs, install packages, or any command-line operation. Returns stdout+stderr, truncated to 10,000 chars.",
+        "Execute a shell command. Use this to run skill scripts, curl APIs, install packages, or any command-line operation. For user file operations, always use explicit paths under workspace/. Returns stdout+stderr, truncated to 10,000 chars.",
         {
             "type": "object",
             "properties": {
@@ -74,7 +78,7 @@ def create_agent(provider_override: str | None = None) -> Agent:
         build_activate_skill(skill_loader),
     )
 
-    llm = LLM(provider=provider, api_key=api_key, model=config.get("providers", {}).get(provider, {}).get("model"))
+    llm = LLM(provider=provider, api_key=api_key, model=selected_model)
     return Agent(
         llm=llm,
         skill_loader=skill_loader,
@@ -83,8 +87,8 @@ def create_agent(provider_override: str | None = None) -> Agent:
     )
 
 
-def run_cli(message: str) -> str:
-    return create_agent().run(message)
+def format_confirmation_message(exc: AgentConfirmationRequired) -> str:
+    return f"[confirm required] {exc.message}"
 
 
 def run_interactive() -> None:
@@ -96,4 +100,7 @@ def run_interactive() -> None:
             return
         if not text:
             continue
-        print(agent.run(text))
+        try:
+            print(agent.run(text))
+        except AgentConfirmationRequired as exc:
+            print(format_confirmation_message(exc))
