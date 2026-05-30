@@ -8,7 +8,7 @@
 
 ## 已完成能力
 
-- 调用 `GET https://api.pledgebox.com/api/openapi/orders` 获取订单数据。
+- 调用 ` https://api.pledgebox.com/api/openapi/orders` 获取订单数据。
 - 支持分页下载，通过 `page` 参数自动翻页。
 - 默认只下载已完成 Survey 且已锁定的订单：`is_completed=1`，`order_status=lock`。
 - 保存完整原始订单 JSON，方便后续回溯和重新清洗。
